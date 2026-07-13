@@ -109,6 +109,26 @@ type Check interface {
   - [x] golden test 網羅
   - [x] `go vet` / `golangci-lint`
   - [x] 実機マトリクス検証（読み取り専用項目。状態変更を伴う項目は下記「検証手順」6 に残置）
+- [x] **Phase 7 — 公開準備とリリース (v0.1.0)**
+  - [x] `.gitattributes`（`eol=lf`）追加。golden/`.go` が CRLF 化され
+    render テストが FAIL していたブロッカーを解消（CI の windows-latest
+    でも autocrlf=true 既定のため必須）
+  - [x] `LICENSE`（MIT）追加
+  - [x] CI（`.github/workflows/ci.yml`, windows-latest 固定）:
+    build/vet/test/golangci-lint。golangci-lint はバイナリ配布版が
+    go1.24 ビルドで go.mod の go1.26.5 を解釈できず失敗するため、
+    `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2`
+    を直接実行する方式に変更（`golangci-lint-action` の `install-mode:
+    goinstall` は v2 系の `/v2` モジュールパスを認識せず不可）
+  - [x] `.goreleaser.yaml` + リリースワークフロー
+    (`.github/workflows/release.yml`, タグ `v*` → windows amd64/arm64
+    zip + checksums + GitHub Release を自動生成)
+  - [x] README に License セクション・バイナリ入手方法・CI バッジを追記
+  - [x] リポジトリ description/topics 設定、公開前に個人情報混入なしを
+    `git log -p` で確認（VISION の架空値のみ）、`public` へ変更
+  - [x] `v0.1.0` タグ push → Release 自動生成を確認。ダウンロードした
+    zip を展開し実機で実行、`-version` が `v0.1.0` を返すこと、
+    実際の診断出力が得られることを確認（検証用一時ファイルは削除済み）
 
 各フェーズ末で `go build ./... && go vet ./... && go test ./...` を通す。
 
