@@ -101,10 +101,10 @@ type Check interface {
 - [x] **Phase 4 — アカウント種別 + ユーザー名形式候補**
   - [x] 種別判定ロジック
   - [x] 候補生成（最も曖昧な領域。テストを厚くする）
-- [ ] **Phase 5 — 仕上げ**
-  - [ ] Recommended 判定（Tailscale IP 優先）
-  - [ ] Hint 文言を VISION の例文に揃える
-  - [ ] `--version`、NeedsAdmin ラベル表示、README
+- [x] **Phase 5 — 仕上げ**
+  - [x] Recommended 判定（Tailscale IP 優先）
+  - [x] Hint 文言を VISION の例文に揃える
+  - [x] `--version`、NeedsAdmin ラベル表示、README
 - [ ] **Phase 6 — 品質**
   - [ ] golden test 網羅
   - [ ] `go vet` / `golangci-lint`
@@ -137,6 +137,10 @@ type Check interface {
 
 ## 進捗メモ
 
+- **Phase 5 完了**
+  - Recommended（Tailscale 優先）と NeedsAdmin ラベルは Phase 1〜3 で実装済みだったためチェックのみ更新
+  - rdp_enabled の NG Hint を VISION の 2 行例文に揃えた。firewall の NG Message は英語 Message / 日本語 Hint の規約を優先し VISION の日本語例文（「ネットワークが「パブリック」...」）には揃えない（Hint 側はほぼ一致済み）
+  - `-version`: stdlib flag + `debug.ReadBuildInfo()` フォールバック（cobra 不採用の方針どおり）
 - **Phase 4 完了**（`hostinfo.Classify` + `winsys.CurrentAccount`、`HostInfo.UserName` → `Login UserLogin` に置換）
   - winsys は生データ（SID/UPN/Join/MSA サブキー）のみ返し、判定・"@" フィルタは hostinfo 側（OS 非依存でテスト可能）
   - MSA レジストリ: キー不在は「MSA 痕跡なし = ローカル確定材料」（MSAChecked=true・0件）、読み取り失敗のみ Unknown 退避
