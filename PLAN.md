@@ -98,9 +98,9 @@ type Check interface {
   - [x] ファイアウォール（COM、失敗時 Unknown フォールバックを最初から実装）
   - [x] グループ所属（トークン）
   - [x] スリープ（電源 API）
-- [ ] **Phase 4 — アカウント種別 + ユーザー名形式候補**
-  - [ ] 種別判定ロジック
-  - [ ] 候補生成（最も曖昧な領域。テストを厚くする）
+- [x] **Phase 4 — アカウント種別 + ユーザー名形式候補**
+  - [x] 種別判定ロジック
+  - [x] 候補生成（最も曖昧な領域。テストを厚くする）
 - [ ] **Phase 5 — 仕上げ**
   - [ ] Recommended 判定（Tailscale IP 優先）
   - [ ] Hint 文言を VISION の例文に揃える
@@ -137,6 +137,12 @@ type Check interface {
 
 ## 進捗メモ
 
+- **Phase 4 完了**（`hostinfo.Classify` + `winsys.CurrentAccount`、`HostInfo.UserName` → `Login UserLogin` に置換）
+  - winsys は生データ（SID/UPN/Join/MSA サブキー）のみ返し、判定・"@" フィルタは hostinfo 側（OS 非依存でテスト可能）
+  - MSA レジストリ: キー不在は「MSA 痕跡なし = ローカル確定材料」（MSAChecked=true・0件）、読み取り失敗のみ Unknown 退避
+  - UPN / NetGetJoinInformation / MSA の取得失敗は best-effort で握り、SID 取得失敗のみ error
+  - HostInfoText にセクション間空行を追加（VISION 例準拠）。golden 全更新 + 種別別 4 件追加
+  - 実機（MSA サインイン機）で複数メール候補 + ローカル候補 + 注意書きの表示を確認
 - **Phase 3 完了**（firewall / group_membership / sleep の 3 Check 追加、go-ole v1.3.0 導入）
   - `IsRuleGroupCurrentlyEnabled` は IDL 上パラメータ付き **propget** のため go-ole では `CallMethod` ではなく `GetProperty` で呼ぶ（`CallMethod` は DISP_E_MEMBERNOTFOUND 0x80020003 になり、フォールバックのルール列挙経路に落ちる）
   - グループ所属は **SE_GROUP_ENABLED を問わず「SID が TokenGroups に存在すれば所属」** と判定。UAC 非昇格トークンでは Administrators が SE_GROUP_USE_FOR_DENY_ONLY で載るが、RDP ログオンは新規トークンを生成するため所属の証拠として OK 扱い（実機の非昇格実行で検証済み）

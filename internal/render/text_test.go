@@ -18,10 +18,10 @@ func readGolden(t *testing.T, name string) string {
 	return string(data)
 }
 
-func TestHostInfoText(t *testing.T) {
-	info := hostinfo.HostInfo{
+func baseHostInfo(login hostinfo.UserLogin) hostinfo.HostInfo {
+	return hostinfo.HostInfo{
 		PCName:      "OMEN16",
-		UserName:    "OMEN16\\yugo",
+		Login:       login,
 		TailscaleIP: "100.80.10.5",
 		Recommended: "100.80.10.5",
 		Edition: hostinfo.Edition{
@@ -31,11 +31,69 @@ func TestHostInfoText(t *testing.T) {
 		},
 		LocalIPv4: []string{"192.168.1.20"},
 	}
+}
 
-	got := HostInfoText(info)
-	want := readGolden(t, "hostinfo.golden")
-	if got != want {
-		t.Errorf("HostInfoText mismatch:\ngot:\n%s\nwant:\n%s", got, want)
+func TestHostInfoText(t *testing.T) {
+	tests := []struct {
+		name   string
+		golden string
+		login  hostinfo.UserLogin
+	}{
+		{
+			name:   "local account",
+			golden: "hostinfo.golden",
+			login: hostinfo.UserLogin{
+				AccountType: hostinfo.AccountLocal,
+				Candidates:  []hostinfo.UserCandidate{{Value: `OMEN16\yugo`, Label: "local account"}},
+			},
+		},
+		{
+			name:   "microsoft account with two candidates and note",
+			golden: "hostinfo_msa.golden",
+			login: hostinfo.UserLogin{
+				AccountType: hostinfo.AccountMicrosoft,
+				Candidates: []hostinfo.UserCandidate{
+					{Value: `MicrosoftAccount\user@example.com`, Label: "Microsoft account"},
+					{Value: `OMEN16\yugo`, Label: "local account"},
+				},
+				Notes: []string{"Microsoft アカウントでは PIN ではなくアカウントのパスワードでサインインしてください。"},
+			},
+		},
+		{
+			name:   "azure ad account",
+			golden: "hostinfo_azuread.golden",
+			login: hostinfo.UserLogin{
+				AccountType: hostinfo.AccountAzureAD,
+				Candidates:  []hostinfo.UserCandidate{{Value: `AzureAD\yugo@example.com`, Label: "Microsoft Entra ID account"}},
+			},
+		},
+		{
+			name:   "domain account",
+			golden: "hostinfo_domain.golden",
+			login: hostinfo.UserLogin{
+				AccountType: hostinfo.AccountDomain,
+				Candidates:  []hostinfo.UserCandidate{{Value: `CORP\yugo`, Label: "domain account"}},
+			},
+		},
+		{
+			name:   "unknown account type with note",
+			golden: "hostinfo_account_unknown.golden",
+			login: hostinfo.UserLogin{
+				AccountType: hostinfo.AccountUnknown,
+				Candidates:  []hostinfo.UserCandidate{{Value: `OMEN16\yugo`, Label: "local account"}},
+				Notes:       []string{`Microsoft アカウントの場合は MicrosoftAccount\メールアドレス 形式も試してください。`},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := HostInfoText(baseHostInfo(tt.login))
+			want := readGolden(t, tt.golden)
+			if got != want {
+				t.Errorf("HostInfoText mismatch:\ngot:\n%s\nwant:\n%s", got, want)
+			}
+		})
 	}
 }
 

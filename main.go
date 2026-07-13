@@ -16,7 +16,7 @@ func main() {
 		Edition:      winsys.ReadEdition,
 		LocalIPv4:    winsys.LocalIPv4,
 		TailscaleIP:  winsys.TailscaleIP,
-		UserName:     winsys.CurrentUserName,
+		Account:      winsys.CurrentAccount,
 	})
 
 	checks := buildChecks()

@@ -40,6 +40,19 @@ func TestReadSleepTimeouts_Smoke(t *testing.T) {
 	}
 }
 
+func TestCurrentAccount_Smoke(t *testing.T) {
+	data, err := CurrentAccount()
+	if err != nil {
+		t.Fatalf("CurrentAccount() error = %v", err)
+	}
+	if !strings.HasPrefix(data.UserSID, "S-1-") {
+		t.Errorf("UserSID = %q, does not look like a SID", data.UserSID)
+	}
+	if data.User == "" {
+		t.Error("User is empty")
+	}
+}
+
 func TestQueryRDPFirewall_Smoke(t *testing.T) {
 	active, _, _, err := QueryRDPFirewall(3389)
 	if err != nil {
