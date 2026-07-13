@@ -11,19 +11,19 @@ const currentVersionKey = `SOFTWARE\Microsoft\Windows NT\CurrentVersion`
 
 // homeEditionIDs は RDP ホストとして動作できない Home 系 EditionID。
 var homeEditionIDs = map[string]bool{
-	"Core":                 true,
-	"CoreN":                true,
-	"CoreSingleLanguage":   true,
-	"CoreCountrySpecific":  true,
-	"CoreARM":              true,
-	"Home":                 true,
-	"HomeN":                true,
-	"HomeSingleLanguage":   true,
-	"HomeCountrySpecific":  true,
-	"HomeBasic":            true,
-	"HomeBasicN":           true,
-	"HomePremium":          true,
-	"HomePremiumN":         true,
+	"Core":                true,
+	"CoreN":               true,
+	"CoreSingleLanguage":  true,
+	"CoreCountrySpecific": true,
+	"CoreARM":             true,
+	"Home":                true,
+	"HomeN":               true,
+	"HomeSingleLanguage":  true,
+	"HomeCountrySpecific": true,
+	"HomeBasic":           true,
+	"HomeBasicN":          true,
+	"HomePremium":         true,
+	"HomePremiumN":        true,
 }
 
 // ReadEdition はレジストリから Windows エディション情報を読む。

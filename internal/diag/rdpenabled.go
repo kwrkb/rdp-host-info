@@ -7,8 +7,8 @@ type RDPEnabledCheck struct {
 }
 
 const (
-	terminalServerKey  = `SYSTEM\CurrentControlSet\Control\Terminal Server`
-	denyTSConnections  = "fDenyTSConnections"
+	terminalServerKey = `SYSTEM\CurrentControlSet\Control\Terminal Server`
+	denyTSConnections = "fDenyTSConnections"
 )
 
 func (c RDPEnabledCheck) Name() string     { return "rdp_enabled" }

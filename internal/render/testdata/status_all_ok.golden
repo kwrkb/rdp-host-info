@@ -1,0 +1,10 @@
+Remote Desktop Status
+
+[OK] Windows supports Remote Desktop hosting (Windows 11 Pro)
+[OK] Remote Desktop is enabled
+[OK] Remote Desktop Services is running
+[OK] Windows Firewall allows Remote Desktop (Private profile, active)
+[OK] TCP 3389 is listening
+[OK] User is allowed to connect (Administrators)
+[WARN] PC sleeps after 15 minutes
+  スリープ中はリモートデスクトップ接続を受け付けられない場合があります。常時接続したい場合は 設定 > システム > 電源 でスリープを「なし」にすることを検討してください。

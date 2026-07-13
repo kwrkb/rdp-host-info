@@ -9,9 +9,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 全テスト: `go test ./...`
 - 単一パッケージ: `go test ./internal/diag/...`
 - 単一テスト: `go test ./internal/diag/ -run TestRDPEnabledCheck`
+- lint: `golangci-lint run ./...`（設定は `.golangci.yml`）
 - 実行: `go run .`
 
-module は `github.com/kwrkb/rdp-host-info`（Go 1.26）。依存は `golang.org/x/sys` のみ（Phase 3 でファイアウォール COM 用に `go-ole` を追加予定）。
+module は `github.com/kwrkb/rdp-host-info`（Go 1.26）。依存は `golang.org/x/sys` と `github.com/go-ole/go-ole`（ファイアウォール COM 用）の 2 つのみ。
 
 ## アーキテクチャ
 

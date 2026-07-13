@@ -1,6 +1,7 @@
 package render
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -102,6 +103,85 @@ func TestHostInfoText_UnknownFields(t *testing.T) {
 	want := readGolden(t, "hostinfo_unknown.golden")
 	if got != want {
 		t.Errorf("HostInfoText mismatch:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// TestStatusText_RealChecks は実際の Check 実装（fake provider 注入）の
+// Message/Hint 文言を end-to-end で golden と比較する。
+func TestStatusText_RealChecks(t *testing.T) {
+	edition := func(display string, supports bool) func() (hostinfo.Edition, error) {
+		return func() (hostinfo.Edition, error) {
+			return hostinfo.Edition{DisplayName: display, SupportsRDPHost: supports}, nil
+		}
+	}
+	port3389 := func() (uint32, bool) { return 3389, true }
+
+	tests := []struct {
+		name   string
+		golden string
+		checks []diag.Check
+	}{
+		{
+			name:   "all ok with sleep warning (VISION full set)",
+			golden: "status_all_ok.golden",
+			checks: []diag.Check{
+				diag.EditionSupportCheck{ReadEdition: edition("Windows 11 Pro", true)},
+				diag.RDPEnabledCheck{ReadDWORD: func(string, string) (uint32, error) { return 0, nil }},
+				diag.ServiceRunningCheck{
+					ServiceName: "TermService", DisplayName: "Remote Desktop Services",
+					QueryRunning: func(string) (bool, error) { return true, nil },
+				},
+				diag.FirewallCheck{
+					ReadPort: port3389,
+					Query:    func(uint32) (uint32, bool, bool, error) { return diag.FwProfilePrivate, true, false, nil },
+				},
+				diag.PortListeningCheck{
+					ReadPort:    port3389,
+					IsListening: func(uint32) (bool, error) { return true, nil },
+				},
+				diag.GroupMembershipCheck{
+					ListTokenGroups: func() ([]diag.TokenGroup, error) {
+						return []diag.TokenGroup{{SID: diag.SIDAdministrators}}, nil
+					},
+				},
+				diag.SleepCheck{ReadTimeouts: func() (uint32, uint32, bool, error) { return 900, 0, false, nil }},
+			},
+		},
+		{
+			name:   "ng with hints (home edition, rdp disabled)",
+			golden: "status_ng.golden",
+			checks: []diag.Check{
+				diag.EditionSupportCheck{ReadEdition: edition("Windows 11 Home", false)},
+				diag.RDPEnabledCheck{ReadDWORD: func(string, string) (uint32, error) { return 1, nil }},
+			},
+		},
+		{
+			name:   "all unknown with manual-check hints",
+			golden: "status_all_unknown.golden",
+			checks: []diag.Check{
+				diag.EditionSupportCheck{
+					ReadEdition: func() (hostinfo.Edition, error) { return hostinfo.Edition{}, errors.New("boom") },
+				},
+				diag.RDPEnabledCheck{ReadDWORD: func(string, string) (uint32, error) { return 0, errors.New("boom") }},
+				diag.FirewallCheck{
+					ReadPort: port3389,
+					Query:    func(uint32) (uint32, bool, bool, error) { return 0, false, false, errors.New("boom") },
+				},
+				diag.GroupMembershipCheck{
+					ListTokenGroups: func() ([]diag.TokenGroup, error) { return nil, errors.New("boom") },
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := StatusText(diag.RunAll(tt.checks))
+			want := readGolden(t, tt.golden)
+			if got != want {
+				t.Errorf("StatusText mismatch:\ngot:\n%s\nwant:\n%s", got, want)
+			}
+		})
 	}
 }
 

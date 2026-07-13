@@ -105,10 +105,10 @@ type Check interface {
   - [x] Recommended 判定（Tailscale IP 優先）
   - [x] Hint 文言を VISION の例文に揃える
   - [x] `--version`、NeedsAdmin ラベル表示、README
-- [ ] **Phase 6 — 品質**
-  - [ ] golden test 網羅
-  - [ ] `go vet` / `golangci-lint`
-  - [ ] 実機マトリクス検証
+- [x] **Phase 6 — 品質**
+  - [x] golden test 網羅
+  - [x] `go vet` / `golangci-lint`
+  - [x] 実機マトリクス検証（読み取り専用項目。状態変更を伴う項目は下記「検証手順」6 に残置）
 
 各フェーズ末で `go build ./... && go vet ./... && go test ./...` を通す。
 
@@ -121,10 +121,16 @@ type Check interface {
 
 ## 検証手順
 
-1. `go build ./...` / `go vet ./...` / `go test ./...`
+1. `go build ./...` / `go vet ./...` / `go test ./...` / `golangci-lint run ./...`
 2. 本機で `go run .` → VISION の「想定利用フロー」の出力例と見比べる
 3. 非昇格ターミナルで実行し、admin なしで Unknown にならないこと（なる項目は NeedsAdmin ラベルが出ること）を確認
-4. 状態を変えて再実行（例: RDP を一時的に無効化 → `[NG]` と Hint が出るか）。ツール自身は設定を変更しない
+4. `whoami /user`（SID）・`whoami /upn` と Username 候補を突合
+5. `-version` / `--help` の出力確認
+6. 状態を変えて再実行（手動、ツール自身は設定を変更しない）:
+   - ネットワークを一時的に「パブリック」へ → firewall が `[NG]` + Hint → 戻す
+   - RDP を一時的に無効化 → `[NG]` + exit code 1 → 再有効化
+   - Tailscale 停止 → Recommended がローカル IPv4 に切り替わる
+   - 昇格ターミナルでも実行し、非昇格と表示差がないこと
 
 ## リスク
 
@@ -137,6 +143,11 @@ type Check interface {
 
 ## 進捗メモ
 
+- **Phase 6 完了 = MVP 完成**
+  - status golden 3 件追加（all_ok / ng / all_unknown）。実 Check（fake provider 注入）→ `RunAll` → `StatusText` の end-to-end で文言の回帰を検知する形にした
+  - golangci-lint v2 導入（winget）。`.golangci.yml` は govet/staticcheck/errcheck/unused/ineffassign + gofmt。defer での後始末（handle Close/Free）は errcheck 除外
+  - 既存の gofmt 未整形 3 ファイル（rdpenabled/edition_windows/tcptable_windows）を整形
+  - 実機マトリクスの読み取り専用項目を検証済み（SID/UPN 突合、非昇格実行、-version/--help）。ネットワーク切替・RDP 無効化・Tailscale 停止・昇格実行は手動残置（検証手順 6）
 - **Phase 5 完了**
   - Recommended（Tailscale 優先）と NeedsAdmin ラベルは Phase 1〜3 で実装済みだったためチェックのみ更新
   - rdp_enabled の NG Hint を VISION の 2 行例文に揃えた。firewall の NG Message は英語 Message / 日本語 Hint の規約を優先し VISION の日本語例文（「ネットワークが「パブリック」...」）には揃えない（Hint 側はほぼ一致済み）

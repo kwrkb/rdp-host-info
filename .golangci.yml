@@ -1,0 +1,24 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - unused
+    - ineffassign
+  settings:
+    errcheck:
+      exclude-functions:
+        # defer での後始末（ハンドル/バッファ解放）は失敗しても対処のしようがない
+        - (*github.com/go-ole/go-ole.VARIANT).Clear
+        - (golang.org/x/sys/windows/registry.Key).Close
+        - golang.org/x/sys/windows.CloseServiceHandle
+        - golang.org/x/sys/windows.LocalFree
+        - golang.org/x/sys/windows.NetApiBufferFree
+        - (net.Conn).Close
+
+formatters:
+  enable:
+    - gofmt
