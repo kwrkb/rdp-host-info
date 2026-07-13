@@ -29,10 +29,11 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
-          # バイナリ配布版は古い Go でビルドされており go.mod のターゲット Go
-          # バージョン（go 1.26.5、非常に新しい）を解釈できず失敗する
-          # (can't load config: the Go language version used to build
-          # golangci-lint is lower than the targeted Go version)。
-          # setup-go で導入済みの Go 1.26.5 でソースビルドさせて回避する。
+          # バイナリ配布版（latest でも v1.64.8 が降ってくる）は go1.24 で
+          # ビルドされており go.mod のターゲット Go バージョン（1.26.5、
+          # 非常に新しい）を解釈できず "can't load config" で落ちる。
+          # goinstall で version: latest にすると今度は v1 系（旧 config
+          # schema）が入り、.golangci.yml の v2 フォーマットと非互換になる。
+          # ローカル検証済みの v2 系バージョンを明示指定して両方を回避する。
+          version: v2.12.2
           install-mode: goinstall
