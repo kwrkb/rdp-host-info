@@ -1,3 +1,6 @@
+// Package hostinfo は RDP 接続に必要なホスト情報のモデルと、
+// アカウント種別判定（ユーザー名候補生成）を提供する。OS 非依存であり、
+// Windows からの取得は Providers として注入される（internal/winsys を import しない）。
 package hostinfo
 
 type Edition struct {

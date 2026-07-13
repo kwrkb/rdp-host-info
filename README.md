@@ -32,7 +32,7 @@ Remote Desktop Status
 [OK] TCP 3389 is listening
 [OK] User is allowed to connect (Administrators)
 [WARN] PC sleeps after 15 minutes
-  スリープ中はリモートデスクトップ接続を受け付けられない場合があります。
+  スリープ中はリモートデスクトップ接続を受け付けられない場合があります。常時接続したい場合は 設定 > システム > 電源 でスリープを「なし」にすることを検討してください。
 ```
 
 ## インストール
@@ -98,6 +98,7 @@ RDP クライアントに入力するユーザー名はアカウント種別で�
 go build ./...
 go vet ./...
 go test ./...
+golangci-lint run ./...
 ```
 
 詳細な設計は `VISION.md`（正典仕様）と `PLAN.md` を参照。

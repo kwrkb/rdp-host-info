@@ -1,3 +1,5 @@
+// Package render は hostinfo / diag の結果を VISION.md 準拠の
+// 人間向けテキストに整形する。出力の回帰は golden test で検知する。
 package render
 
 import (

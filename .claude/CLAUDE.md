@@ -20,9 +20,15 @@ module は `github.com/kwrkb/rdp-host-info`（Go 1.26）。依存は `golang.org
 
 `internal/diag` と `internal/hostinfo` は `internal/winsys` を import しない。各 Check / Collector は抽象化した関数型（provider）を注入され、`main.go`（+ `checks.go`）が `winsys` の実装を配線する。これにより実 OS 無しでテスト可能になっている。新しい診断項目を追加するときもこの構造を踏襲する。
 
+禁止方向は「diag / hostinfo → winsys」のみ。逆方向（winsys → hostinfo / diag）は共有型を返すために許容されている（例: `winsys.ReadEdition` → `hostinfo.Edition`、`winsys.ListTokenGroups` → `diag.TokenGroup`、`winsys.CurrentAccount` → `hostinfo.AccountData`）。
+
 ### Check インターフェース
 
 `internal/diag/check.go` が中核。`Check` は `Name() / NeedsAdmin() / Run() Result` を持つ。`diag.RunAll` が各 `Run()` を実行し、panic を recover して `StatusUnknown` に落とす。`Status` のゼロ値は `StatusUnknown`（取得失敗時のデフォルト）。
+
+### アカウント種別判定（hostinfo）
+
+RDP 接続用ユーザー名の候補生成は `internal/hostinfo/account.go` の `Classify` に集約されている。winsys（`CurrentAccount`）は生データ（SID 文字列 / UPN / ドメイン参加状態 / MSA レジストリのサブキー名）のみ返し、判定・フィルタは hostinfo 側で行う。判定は確度順（AzureAD SID → ドメイン参加 → MSA レジストリ → ローカル）で、順序を崩すと誤判定する（AzureAD 機はドメイン参加も true になりうる）。断定できない場合は複数候補 + Notes を返す。
 
 ### winsys の隔離
 
@@ -58,3 +64,5 @@ Windows 依存コードは `internal/winsys/*_windows.go` に集約し、ビル�
 
 - `VISION.md` — プロジェクトの正典仕様
 - `PLAN.md` — 全体計画・フェーズ分割・進捗
+- `LESSONS.md` — 過去に踏んだ落とし穴（COM の propget、deny-only SID 等）。同種の作業前に確認する
+- `implementation-notes.md` — 実装中の判断・妥協の記録
