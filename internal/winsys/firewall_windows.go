@@ -3,6 +3,7 @@ package winsys
 import (
 	"errors"
 	"fmt"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -31,6 +32,12 @@ const (
 // go-ole の IDispatch は型ミスマッチが実行時 panic になりうるため、
 // 関数全体を recover で保護し error に変換する。
 func QueryRDPFirewall(port uint32) (activeProfiles uint32, ruleEnabled bool, viaFallback bool, err error) {
+	// STA（COINIT_APARTMENTTHREADED）は初期化・呼び出し・未初期化が同一 OS
+	// スレッドで行われることを要求する。goroutine は LockOSThread しない限り
+	// 別スレッドへ再スケジュールされうるため、関数全体をスレッド固定する。
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("firewall COM: %v", r)

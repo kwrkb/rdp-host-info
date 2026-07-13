@@ -40,6 +40,10 @@
 - `INetFwPolicy2.IsRuleGroupCurrentlyEnabled` を go-ole の `CallMethod` で呼ぶと DISP_E_MEMBERNOTFOUND (0x80020003) になった。IDL 上はメソッドではなくパラメータ付き propget プロパティだった
 - **ルール**: COM メンバーを IDispatch 経由で呼ぶ前に IDL の宣言（method / propget / propput）を確認し、propget は `oleutil.GetProperty(disp, name, args...)` で呼ぶ
 
+### STA COM を扱う関数は runtime.LockOSThread でスレッド固定する
+- `CoInitializeEx(COINIT_APARTMENTTHREADED)` は初期化・オブジェクト操作・`CoUninitialize` が同一 OS スレッドで行われることを要求するが、Go の goroutine は `LockOSThread` しない限り任意の OS スレッドへ再スケジュールされうる。レビュー（gemini-code-assist bot）指摘で発覚
+- **ルール**: STA で COM を初期化する関数は、`CoInitializeEx` より前で `runtime.LockOSThread()` を呼び、`defer runtime.UnlockOSThread()` を（`CoUninitialize` の defer より先に）登録して関数全体をスレッド固定する
+
 ### フォールバック経路は本経路の失敗を隠す — 出力に経路マーカーを入れて検証する
 - 上記の CallMethod 失敗はフォールバック（ルール列挙）が動いたため、テスト・ビルドは全て通り一見正常だった。実機出力に付けた `port rule` マーカーで初めてフォールバック経路に落ちていることに気づいた
 - **ルール**: フォールバックを実装したら、どちらの経路で結果を得たかを出力・ログで区別できるようにし、実機検証では本経路で動いていることまで確認する
