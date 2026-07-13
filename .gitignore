@@ -1,0 +1,14 @@
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.test
+*.out
+/rdp-host-info
+
+# Go workspace
+go.work
+go.work.sum
+
+# OS
+Thumbs.db

@@ -1,0 +1,6 @@
+Remote Desktop Status
+
+[OK] Windows supports Remote Desktop hosting
+[NG] Remote Desktop is disabled
+  設定からリモートデスクトップを有効にしてください。
+[??] group membership could not be determined (admin required)
