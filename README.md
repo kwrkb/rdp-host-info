@@ -1,5 +1,7 @@
 # rdp-host-info
 
+![CI](https://github.com/kwrkb/rdp-host-info/actions/workflows/ci.yml/badge.svg)
+
 リモートデスクトップ（RDP）のホスト側 PC で実行し、「接続に必要な情報」と「接続を受け入れられる状態か」を一度に表示する Windows 用 CLI ツール。
 
 接続がうまくいかないとき、原因はたいてい ホスト側の設定（RDP 無効 / ネットワークがパブリック / ユーザー名の形式違い / スリープ）にある。このツールはそれらを診断して人間向けに表示する。**設定の変更は一切行わない**（診断・表示専用）。
@@ -39,6 +41,13 @@ Remote Desktop Status
 ## インストール
 
 Windows 10/11 専用。
+
+[Releases](https://github.com/kwrkb/rdp-host-info/releases) からビルド済みバイナリを取得するのが手軽:
+
+1. 最新リリースから環境に合う zip（`rdp-host-info_<version>_windows_amd64.zip` など）をダウンロード
+2. 展開して `rdp-host-info.exe` を実行
+
+または `go install`:
 
 ```powershell
 go install github.com/kwrkb/rdp-host-info@latest
@@ -103,3 +112,7 @@ golangci-lint run ./...
 ```
 
 詳細な設計は `VISION.md`（正典仕様）と `PLAN.md` を参照。
+
+## License
+
+MIT License. 詳細は [LICENSE](LICENSE) を参照。
