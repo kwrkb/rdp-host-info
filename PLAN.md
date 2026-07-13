@@ -94,21 +94,21 @@ type Check interface {
   - [x] RDP 有効（fDenyTSConnections）
   - [x] ポート待受（PortNumber + TCP テーブル）
   - [x] TermService 稼働
-- [ ] **Phase 3 — 難しいチェック群**
-  - [ ] ファイアウォール（COM、失敗時 Unknown フォールバックを最初から実装）
-  - [ ] グループ所属（トークン）
-  - [ ] スリープ（電源 API）
-- [ ] **Phase 4 — アカウント種別 + ユーザー名形式候補**
-  - [ ] 種別判定ロジック
-  - [ ] 候補生成（最も曖昧な領域。テストを厚くする）
-- [ ] **Phase 5 — 仕上げ**
-  - [ ] Recommended 判定（Tailscale IP 優先）
-  - [ ] Hint 文言を VISION の例文に揃える
-  - [ ] `--version`、NeedsAdmin ラベル表示、README
-- [ ] **Phase 6 — 品質**
-  - [ ] golden test 網羅
-  - [ ] `go vet` / `golangci-lint`
-  - [ ] 実機マトリクス検証
+- [x] **Phase 3 — 難しいチェック群**
+  - [x] ファイアウォール（COM、失敗時 Unknown フォールバックを最初から実装）
+  - [x] グループ所属（トークン）
+  - [x] スリープ（電源 API）
+- [x] **Phase 4 — アカウント種別 + ユーザー名形式候補**
+  - [x] 種別判定ロジック
+  - [x] 候補生成（最も曖昧な領域。テストを厚くする）
+- [x] **Phase 5 — 仕上げ**
+  - [x] Recommended 判定（Tailscale IP 優先）
+  - [x] Hint 文言を VISION の例文に揃える
+  - [x] `--version`、NeedsAdmin ラベル表示、README
+- [x] **Phase 6 — 品質**
+  - [x] golden test 網羅
+  - [x] `go vet` / `golangci-lint`
+  - [x] 実機マトリクス検証（読み取り専用項目。状態変更を伴う項目は下記「検証手順」6 に残置）
 
 各フェーズ末で `go build ./... && go vet ./... && go test ./...` を通す。
 
@@ -121,20 +121,48 @@ type Check interface {
 
 ## 検証手順
 
-1. `go build ./...` / `go vet ./...` / `go test ./...`
+1. `go build ./...` / `go vet ./...` / `go test ./...` / `golangci-lint run ./...`
 2. 本機で `go run .` → VISION の「想定利用フロー」の出力例と見比べる
 3. 非昇格ターミナルで実行し、admin なしで Unknown にならないこと（なる項目は NeedsAdmin ラベルが出ること）を確認
-4. 状態を変えて再実行（例: RDP を一時的に無効化 → `[NG]` と Hint が出るか）。ツール自身は設定を変更しない
+4. `whoami /user`（SID）・`whoami /upn` と Username 候補を突合
+5. `-version` / `--help` の出力確認
+6. 状態を変えて再実行（手動、ツール自身は設定を変更しない）:
+   - ネットワークを一時的に「パブリック」へ → firewall が `[NG]` + Hint → 戻す
+   - RDP を一時的に無効化 → `[NG]` + exit code 1 → 再有効化
+   - Tailscale 停止 → Recommended がローカル IPv4 に切り替わる
+   - 昇格ターミナルでも実行し、非昇格と表示差がないこと
 
 ## リスク
 
-- **firewall COM が最大の複雑性**。間接文字列 `@FirewallAPI.dll,-28752` が見つからない場合は「ルール列挙で LocalPort==設定ポート && TCP」にフォールバック。サードパーティ AV 環境では実態と乖離しうる → メッセージに限定を明記
+- **firewall COM が最大の複雑性**。間接文字列 `@FirewallAPI.dll,-28752` が見つからない場合は「ルール列挙で LocalPort==設定ポート && TCP && Action==Allow」にフォールバック。サードパーティ AV 環境では実態と乖離しうる → メッセージに限定を明記
 - **MSA 判定は非公開レジストリ依存**。壊れたら Unknown + 複数候補提示に退避（VISION が許容）
-- **Administrators 判定**: TokenGroups 列挙方式でも「所属しているが LSA ポリシーで拒否」は検出不能 → 文言を「グループ所属」に限定
+- **Administrators 判定**: TokenGroups 列挙方式でも「所属しているが LSA ポリシー（deny-logon 権利）で拒否」は検出不能 → 文言を「グループ所属」に限定（実装済み。Hint で deny ポリシーの手動確認方法を案内）
 - **Modern Standby (S0)** 機では STANDBY_TIMEOUT の意味が従来スリープと異なる → WARN 文言は断定を避ける
 - **GetExtendedTcpTable の構造体自前定義**はバグりやすい → テストを厚めに
 - go-ole の IDispatch は型ミスマッチが実行時エラー → COM 部分は必ず recover/エラー → Unknown 経路を通す
 
 ## 進捗メモ
 
-（実装開始後、完了・判断・変更をここに追記する）
+- **Adversarial review 対応**（Codex, 2026-07-13）: 「取得失敗は成功とも失敗とも偽らず Unknown」原則への抵触 2 件を修正
+  - firewall フォールバック（ルール列挙）が `Action`（Allow/Block）を確認しておらず、有効な受信ブロックルールを許可ルールと誤認しうる問題を修正（`Action==Allow` を追加）
+  - group_membership の OK メッセージが「接続を許可されている」と言い切っていたが、実際は SID 所属の確認のみで deny-logon ポリシーは検出できない。「グループのメンバーである」に文言を弱め、deny ポリシーの手動確認方法を Hint に追加
+  - 混在プロファイル時の `IsRuleGroupCurrentlyEnabled` の厳密な扱いは見送り（既知の制約として本ファイルに明記済み。深い設計変更が必要なため）
+- **Phase 6 完了 = MVP 完成**
+  - status golden 3 件追加（all_ok / ng / all_unknown）。実 Check（fake provider 注入）→ `RunAll` → `StatusText` の end-to-end で文言の回帰を検知する形にした
+  - golangci-lint v2 導入（winget）。`.golangci.yml` は govet/staticcheck/errcheck/unused/ineffassign + gofmt。defer での後始末（handle Close/Free）は errcheck 除外
+  - 既存の gofmt 未整形 3 ファイル（rdpenabled/edition_windows/tcptable_windows）を整形
+  - 実機マトリクスの読み取り専用項目を検証済み（SID/UPN 突合、非昇格実行、-version/--help）。ネットワーク切替・RDP 無効化・Tailscale 停止・昇格実行は手動残置（検証手順 6）
+- **Phase 5 完了**
+  - Recommended（Tailscale 優先）と NeedsAdmin ラベルは Phase 1〜3 で実装済みだったためチェックのみ更新
+  - rdp_enabled の NG Hint を VISION の 2 行例文に揃えた。firewall の NG Message は英語 Message / 日本語 Hint の規約を優先し VISION の日本語例文（「ネットワークが「パブリック」...」）には揃えない（Hint 側はほぼ一致済み）
+  - `-version`: stdlib flag + `debug.ReadBuildInfo()` フォールバック（cobra 不採用の方針どおり）
+- **Phase 4 完了**（`hostinfo.Classify` + `winsys.CurrentAccount`、`HostInfo.UserName` → `Login UserLogin` に置換）
+  - winsys は生データ（SID/UPN/Join/MSA サブキー）のみ返し、判定・"@" フィルタは hostinfo 側（OS 非依存でテスト可能）
+  - MSA レジストリ: キー不在は「MSA 痕跡なし = ローカル確定材料」（MSAChecked=true・0件）、読み取り失敗のみ Unknown 退避
+  - UPN / NetGetJoinInformation / MSA の取得失敗は best-effort で握り、SID 取得失敗のみ error
+  - HostInfoText にセクション間空行を追加（VISION 例準拠）。golden 全更新 + 種別別 4 件追加
+  - 実機（MSA サインイン機）で複数メール候補 + ローカル候補 + 注意書きの表示を確認
+- **Phase 3 完了**（firewall / group_membership / sleep の 3 Check 追加、go-ole v1.3.0 導入）
+  - `IsRuleGroupCurrentlyEnabled` は IDL 上パラメータ付き **propget** のため go-ole では `CallMethod` ではなく `GetProperty` で呼ぶ（`CallMethod` は DISP_E_MEMBERNOTFOUND 0x80020003 になり、フォールバックのルール列挙経路に落ちる）
+  - グループ所属は **SE_GROUP_ENABLED を問わず「SID が TokenGroups に存在すれば所属」** と判定。UAC 非昇格トークンでは Administrators が SE_GROUP_USE_FOR_DENY_ONLY で載るが、RDP ログオンは新規トークンを生成するため所属の証拠として OK 扱い（実機の非昇格実行で検証済み）
+  - winsys → diag の import（`diag.TokenGroup`）は既存の winsys → hostinfo と同方向で許容。禁止は diag/hostinfo → winsys のみ

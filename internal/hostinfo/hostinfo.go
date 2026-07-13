@@ -1,3 +1,6 @@
+// Package hostinfo は RDP 接続に必要なホスト情報のモデルと、
+// アカウント種別判定（ユーザー名候補生成）を提供する。OS 非依存であり、
+// Windows からの取得は Providers として注入される（internal/winsys を import しない）。
 package hostinfo
 
 type Edition struct {
@@ -8,7 +11,7 @@ type Edition struct {
 
 type HostInfo struct {
 	PCName      string
-	UserName    string
+	Login       UserLogin
 	TailscaleIP string
 	Recommended string
 	Edition     Edition
@@ -22,7 +25,7 @@ type Providers struct {
 	Edition      func() (Edition, error)
 	LocalIPv4    func() ([]string, error)
 	TailscaleIP  func() (string, error)
-	UserName     func() (string, error)
+	Account      func() (AccountData, error)
 }
 
 func Collect(p Providers) HostInfo {
@@ -48,9 +51,9 @@ func Collect(p Providers) HostInfo {
 			info.TailscaleIP = v
 		}
 	}
-	if p.UserName != nil {
-		if v, err := p.UserName(); err == nil {
-			info.UserName = v
+	if p.Account != nil {
+		if v, err := p.Account(); err == nil {
+			info.Login = Classify(info.PCName, v)
 		}
 	}
 

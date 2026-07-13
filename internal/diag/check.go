@@ -1,3 +1,6 @@
+// Package diag は RDP 接続受け入れ状態の診断項目（Check）を提供する。
+// OS 非依存であり、Windows からの取得は関数型 provider として注入される
+// （internal/winsys を import しない）。
 package diag
 
 type Status int

@@ -7,8 +7,8 @@ type RDPEnabledCheck struct {
 }
 
 const (
-	terminalServerKey  = `SYSTEM\CurrentControlSet\Control\Terminal Server`
-	denyTSConnections  = "fDenyTSConnections"
+	terminalServerKey = `SYSTEM\CurrentControlSet\Control\Terminal Server`
+	denyTSConnections = "fDenyTSConnections"
 )
 
 func (c RDPEnabledCheck) Name() string     { return "rdp_enabled" }
@@ -28,7 +28,7 @@ func (c RDPEnabledCheck) Run() Result {
 		return Result{
 			Status:  StatusNG,
 			Message: "Remote Desktop is disabled",
-			Hint:    "設定 > システム > リモートデスクトップ からリモートデスクトップを有効にしてください。",
+			Hint:    "Windowsの設定からリモートデスクトップを有効にしてください。\n設定 > システム > リモートデスクトップ",
 		}
 	}
 

@@ -18,9 +18,19 @@ func buildChecks() []diag.Check {
 			DisplayName:  "Remote Desktop Services",
 			QueryRunning: winsys.IsServiceRunning,
 		},
+		diag.FirewallCheck{
+			ReadPort: winsys.ReadRDPPort,
+			Query:    winsys.QueryRDPFirewall,
+		},
 		diag.PortListeningCheck{
 			ReadPort:    winsys.ReadRDPPort,
 			IsListening: winsys.IsPortListeningTCP4,
+		},
+		diag.GroupMembershipCheck{
+			ListTokenGroups: winsys.ListTokenGroups,
+		},
+		diag.SleepCheck{
+			ReadTimeouts: winsys.ReadSleepTimeouts,
 		},
 	}
 }

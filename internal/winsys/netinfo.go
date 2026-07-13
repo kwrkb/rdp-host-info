@@ -1,3 +1,7 @@
+// Package winsys は Windows からの情報取得を隔離する層。ロジックを持たず
+// 「取得と型変換のみ」に留める（判定は diag / hostinfo 側）。Windows 依存
+// コードは *_windows.go に置く。本ファイルのみ net パッケージだけで実装
+// されており OS 非依存。
 package winsys
 
 import (

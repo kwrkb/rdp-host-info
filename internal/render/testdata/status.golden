@@ -4,3 +4,5 @@ Remote Desktop Status
 [NG] Remote Desktop is disabled
   設定からリモートデスクトップを有効にしてください。
 [??] group membership could not be determined (admin required)
+[WARN] PC sleeps after 15 minutes
+  スリープ中はリモートデスクトップ接続を受け付けられない場合があります。

@@ -1,3 +1,5 @@
+// Package render は hostinfo / diag の結果を VISION.md 準拠の
+// 人間向けテキストに整形する。出力の回帰は golden test で検知する。
 package render
 
 import (
@@ -22,8 +24,10 @@ func HostInfoText(info hostinfo.HostInfo) string {
 	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, "PC Name:")
 	fmt.Fprintf(&b, "  %s\n", orUnknown(info.PCName))
+	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, "Windows:")
 	fmt.Fprintf(&b, "  %s\n", orUnknown(info.Edition.DisplayName))
+	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, "Connection Address:")
 	localIP := "unknown"
 	if len(info.LocalIPv4) > 0 {
@@ -31,12 +35,34 @@ func HostInfoText(info hostinfo.HostInfo) string {
 	}
 	fmt.Fprintf(&b, "  Local IP:      %s\n", localIP)
 	fmt.Fprintf(&b, "  Tailscale IP:  %s\n", orUnknown(info.TailscaleIP))
+	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, "Username:")
-	fmt.Fprintf(&b, "  %s\n", orUnknown(info.UserName))
+	writeLogin(&b, info.Login)
+	fmt.Fprintln(&b)
 	fmt.Fprintln(&b, "Recommended:")
 	fmt.Fprintf(&b, "  %s\n", orUnknown(info.Recommended))
 
 	return b.String()
+}
+
+// writeLogin はユーザー名候補をアカウント種別ラベル付きで揃えて出力する。
+// 複数候補は Value を最長幅で左揃えし、注意書きは "* " 付きで続ける。
+func writeLogin(b *strings.Builder, login hostinfo.UserLogin) {
+	if len(login.Candidates) == 0 {
+		fmt.Fprintln(b, "  unknown")
+		return
+	}
+
+	width := 0
+	for _, c := range login.Candidates {
+		width = max(width, len(c.Value))
+	}
+	for _, c := range login.Candidates {
+		fmt.Fprintf(b, "  %-*s    (%s)\n", width, c.Value, c.Label)
+	}
+	for _, note := range login.Notes {
+		fmt.Fprintf(b, "  * %s\n", note)
+	}
 }
 
 func statusLabel(s diag.Status) string {
@@ -64,7 +90,7 @@ func StatusText(results []diag.Result) string {
 		}
 		fmt.Fprintf(&b, "%s %s%s\n", statusLabel(r.Status), r.Message, admin)
 		if r.Hint != "" {
-			for _, line := range strings.Split(r.Hint, "\n") {
+			for line := range strings.SplitSeq(r.Hint, "\n") {
 				fmt.Fprintf(&b, "  %s\n", line)
 			}
 		}
