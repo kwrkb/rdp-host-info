@@ -15,7 +15,28 @@ import (
 // version はリリースビルド時に -ldflags "-X main.version=v0.1.0" で上書きする。
 var version = "dev"
 
+const usageText = `rdp-host-info - show RDP connection info and check host readiness (Windows)
+
+Usage: rdp-host-info [options]
+
+Run on the PC that accepts Remote Desktop connections (the host).
+Prints the connection info a client needs (PC name, IP addresses,
+username format by account type) and diagnoses whether the host can
+accept connections, as [OK]/[NG]/[WARN]/[??] lines with fix hints.
+
+Diagnosis only: never changes any Windows settings.
+Admin rights are not required; checks that need them are labeled
+"(admin required)". Exits 1 if any check is [NG], otherwise 0.
+
+Options:
+  -help       print this help
+  -version    print version and exit
+`
+
 func main() {
+	flag.Usage = func() {
+		_, _ = fmt.Fprint(flag.CommandLine.Output(), usageText)
+	}
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
