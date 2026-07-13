@@ -20,6 +20,7 @@ const (
 	fwProfileTypesAll  = 0x7FFFFFFF // NET_FW_PROFILE2_ALL
 	fwIPProtocolTCP    = 6
 	fwRuleDirectionIn  = 1
+	fwActionAllow      = 1 // NET_FW_ACTION_ALLOW（0 は NET_FW_ACTION_BLOCK）
 )
 
 // QueryRDPFirewall はファイアウォールの事実のみを返す（判定は diag 側）。
@@ -85,7 +86,8 @@ func QueryRDPFirewall(port uint32) (activeProfiles uint32, ruleEnabled bool, via
 	}
 
 	// 間接文字列が解決できない環境向けフォールバック: ルール列挙で
-	// 「現在のプロファイルで有効な、port 宛 TCP 受信許可ルール」を探す。
+	// 「現在のプロファイルで有効な、port 宛 TCP 受信許可(Allow)ルール」を探す。
+	// ブロックルールは対象外（Action を確認する）。
 	enabled, err := hasEnabledInboundTCPRule(policy, port, activeProfiles)
 	if err != nil {
 		return 0, false, false, err
@@ -152,6 +154,11 @@ func ruleMatchesInboundTCP(rule *ole.IDispatch, port, activeProfiles uint32) boo
 	}
 
 	if !boolProp("Enabled") {
+		return false
+	}
+	// Action を見ないと、ポート宛の有効な受信ブロックルールを
+	// 誤って「許可されている」と判定してしまう。
+	if action, ok := intProp("Action"); !ok || action != fwActionAllow {
 		return false
 	}
 	if proto, ok := intProp("Protocol"); !ok || proto != fwIPProtocolTCP {

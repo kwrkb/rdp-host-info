@@ -134,15 +134,19 @@ type Check interface {
 
 ## リスク
 
-- **firewall COM が最大の複雑性**。間接文字列 `@FirewallAPI.dll,-28752` が見つからない場合は「ルール列挙で LocalPort==設定ポート && TCP」にフォールバック。サードパーティ AV 環境では実態と乖離しうる → メッセージに限定を明記
+- **firewall COM が最大の複雑性**。間接文字列 `@FirewallAPI.dll,-28752` が見つからない場合は「ルール列挙で LocalPort==設定ポート && TCP && Action==Allow」にフォールバック。サードパーティ AV 環境では実態と乖離しうる → メッセージに限定を明記
 - **MSA 判定は非公開レジストリ依存**。壊れたら Unknown + 複数候補提示に退避（VISION が許容）
-- **Administrators 判定**: TokenGroups 列挙方式でも「所属しているが LSA ポリシーで拒否」は検出不能 → 文言を「グループ所属」に限定
+- **Administrators 判定**: TokenGroups 列挙方式でも「所属しているが LSA ポリシー（deny-logon 権利）で拒否」は検出不能 → 文言を「グループ所属」に限定（実装済み。Hint で deny ポリシーの手動確認方法を案内）
 - **Modern Standby (S0)** 機では STANDBY_TIMEOUT の意味が従来スリープと異なる → WARN 文言は断定を避ける
 - **GetExtendedTcpTable の構造体自前定義**はバグりやすい → テストを厚めに
 - go-ole の IDispatch は型ミスマッチが実行時エラー → COM 部分は必ず recover/エラー → Unknown 経路を通す
 
 ## 進捗メモ
 
+- **Adversarial review 対応**（Codex, 2026-07-13）: 「取得失敗は成功とも失敗とも偽らず Unknown」原則への抵触 2 件を修正
+  - firewall フォールバック（ルール列挙）が `Action`（Allow/Block）を確認しておらず、有効な受信ブロックルールを許可ルールと誤認しうる問題を修正（`Action==Allow` を追加）
+  - group_membership の OK メッセージが「接続を許可されている」と言い切っていたが、実際は SID 所属の確認のみで deny-logon ポリシーは検出できない。「グループのメンバーである」に文言を弱め、deny ポリシーの手動確認方法を Hint に追加
+  - 混在プロファイル時の `IsRuleGroupCurrentlyEnabled` の厳密な扱いは見送り（既知の制約として本ファイルに明記済み。深い設計変更が必要なため）
 - **Phase 6 完了 = MVP 完成**
   - status golden 3 件追加（all_ok / ng / all_unknown）。実 Check（fake provider 注入）→ `RunAll` → `StatusText` の end-to-end で文言の回帰を検知する形にした
   - golangci-lint v2 導入（winget）。`.golangci.yml` は govet/staticcheck/errcheck/unused/ineffassign + gofmt。defer での後始末（handle Close/Free）は errcheck 除外

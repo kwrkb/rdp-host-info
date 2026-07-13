@@ -5,6 +5,7 @@ Remote Desktop Status
 [OK] Remote Desktop Services is running
 [OK] Windows Firewall allows Remote Desktop (Private profile, active)
 [OK] TCP 3389 is listening
-[OK] User is allowed to connect (Administrators)
+[OK] User is a member of a group allowed to connect (Administrators)
+  これはグループ所属のみの確認です。「リモート デスクトップ サービスを使ったログオンを拒否する」ポリシーで拒否されている場合は、所属していても接続できません。secpol.msc > ローカル ポリシー > ユーザー権利の割り当て で確認してください。
 [WARN] PC sleeps after 15 minutes
   スリープ中はリモートデスクトップ接続を受け付けられない場合があります。常時接続したい場合は 設定 > システム > 電源 でスリープを「なし」にすることを検討してください。

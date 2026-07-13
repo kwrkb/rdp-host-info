@@ -64,6 +64,10 @@ func (c GroupMembershipCheck) Run() Result {
 
 	return Result{
 		Status:  StatusOK,
-		Message: "User is allowed to connect (" + names + ")",
+		Message: "User is a member of a group allowed to connect (" + names + ")",
+		// グループ所属のみの確認であり、「リモート デスクトップ サービスを使った
+		// ログオンを拒否する」ポリシーで拒否されている場合は所属していても
+		// 接続できない（このチェックでは検出できない）ため、断定を避ける。
+		Hint: "これはグループ所属のみの確認です。「リモート デスクトップ サービスを使ったログオンを拒否する」ポリシーで拒否されている場合は、所属していても接続できません。secpol.msc > ローカル ポリシー > ユーザー権利の割り当て で確認してください。",
 	}
 }
