@@ -52,6 +52,7 @@ func TestStatusText(t *testing.T) {
 		{Name: "edition", Status: diag.StatusOK, Message: "Windows supports Remote Desktop hosting"},
 		{Name: "rdp_enabled", Status: diag.StatusNG, Message: "Remote Desktop is disabled", Hint: "設定からリモートデスクトップを有効にしてください。"},
 		{Name: "group", Status: diag.StatusUnknown, Message: "group membership could not be determined", NeedsAdmin: true},
+		{Name: "sleep", Status: diag.StatusWarn, Message: "PC sleeps after 15 minutes", Hint: "スリープ中はリモートデスクトップ接続を受け付けられない場合があります。"},
 	}
 
 	got := StatusText(results)

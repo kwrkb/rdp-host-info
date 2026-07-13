@@ -94,10 +94,10 @@ type Check interface {
   - [x] RDP 有効（fDenyTSConnections）
   - [x] ポート待受（PortNumber + TCP テーブル）
   - [x] TermService 稼働
-- [ ] **Phase 3 — 難しいチェック群**
-  - [ ] ファイアウォール（COM、失敗時 Unknown フォールバックを最初から実装）
-  - [ ] グループ所属（トークン）
-  - [ ] スリープ（電源 API）
+- [x] **Phase 3 — 難しいチェック群**
+  - [x] ファイアウォール（COM、失敗時 Unknown フォールバックを最初から実装）
+  - [x] グループ所属（トークン）
+  - [x] スリープ（電源 API）
 - [ ] **Phase 4 — アカウント種別 + ユーザー名形式候補**
   - [ ] 種別判定ロジック
   - [ ] 候補生成（最も曖昧な領域。テストを厚くする）
@@ -137,4 +137,7 @@ type Check interface {
 
 ## 進捗メモ
 
-（実装開始後、完了・判断・変更をここに追記する）
+- **Phase 3 完了**（firewall / group_membership / sleep の 3 Check 追加、go-ole v1.3.0 導入）
+  - `IsRuleGroupCurrentlyEnabled` は IDL 上パラメータ付き **propget** のため go-ole では `CallMethod` ではなく `GetProperty` で呼ぶ（`CallMethod` は DISP_E_MEMBERNOTFOUND 0x80020003 になり、フォールバックのルール列挙経路に落ちる）
+  - グループ所属は **SE_GROUP_ENABLED を問わず「SID が TokenGroups に存在すれば所属」** と判定。UAC 非昇格トークンでは Administrators が SE_GROUP_USE_FOR_DENY_ONLY で載るが、RDP ログオンは新規トークンを生成するため所属の証拠として OK 扱い（実機の非昇格実行で検証済み）
+  - winsys → diag の import（`diag.TokenGroup`）は既存の winsys → hostinfo と同方向で許容。禁止は diag/hostinfo → winsys のみ
