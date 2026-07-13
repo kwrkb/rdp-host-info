@@ -30,3 +30,9 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+          # バイナリ配布版は古い Go でビルドされており go.mod のターゲット Go
+          # バージョン（go 1.26.5、非常に新しい）を解釈できず失敗する
+          # (can't load config: the Go language version used to build
+          # golangci-lint is lower than the targeted Go version)。
+          # setup-go で導入済みの Go 1.26.5 でソースビルドさせて回避する。
+          install-mode: goinstall
