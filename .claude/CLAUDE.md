@@ -64,5 +64,4 @@ Windows 依存コードは `internal/winsys/*_windows.go` に集約し、ビル�
 
 - `VISION.md` — プロジェクトの正典仕様
 - `PLAN.md` — 全体計画・フェーズ分割・進捗
-- `LESSONS.md` — 過去に踏んだ落とし穴（COM の propget、deny-only SID 等）。同種の作業前に確認する
-- `implementation-notes.md` — 実装中の判断・妥協の記録
+- `LESSONS.md` — 過去に踏んだ落とし穴（COM の propget、deny-only SID 等）と、実装中の判断・妥協の記録。同種の作業前に確認する
