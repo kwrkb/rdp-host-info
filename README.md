@@ -2,9 +2,11 @@
 
 ![CI](https://github.com/kwrkb/rdp-host-info/actions/workflows/ci.yml/badge.svg)
 
-リモートデスクトップ（RDP）のホスト側 PC で実行し、「接続に必要な情報」と「接続を受け入れられる状態か」を一度に表示する Windows 用 CLI ツール。
+English | [日本語](README.ja.md)
 
-接続がうまくいかないとき、原因はたいてい ホスト側の設定（RDP 無効 / ネットワークがパブリック / ユーザー名の形式違い / スリープ）にある。このツールはそれらを診断して人間向けに表示する。**設定の変更は一切行わない**（診断・表示専用）。
+A Windows CLI tool that runs on the Remote Desktop (RDP) host PC and shows, in one shot, both the information you need to connect and whether the host is currently ready to accept a connection.
+
+When a connection fails, the cause is usually a host-side setting: RDP disabled, network profile set to public, wrong username format, or sleep. This tool diagnoses those and displays the results for humans. **It never changes any settings** — diagnosis and display only.
 
 ```
 Remote Desktop Host Information
@@ -33,27 +35,27 @@ Remote Desktop Status
 [OK] Windows Firewall allows Remote Desktop (Private profile, active)
 [OK] TCP 3389 is listening
 [OK] User is a member of a group allowed to connect (Administrators)
-  これはグループ所属のみの確認です。「リモート デスクトップ サービスを使ったログオンを拒否する」ポリシーで拒否されている場合は、所属していても接続できません。secpol.msc > ローカル ポリシー > ユーザー権利の割り当て で確認してください。
+  This only checks group membership. If the "Deny log on through Remote Desktop Services" policy denies this user, membership alone won't let them connect. Check secpol.msc > Local Policies > User Rights Assignment.
 [WARN] PC sleeps after 15 minutes
-  スリープ中はリモートデスクトップ接続を受け付けられない場合があります。常時接続したい場合は 設定 > システム > 電源 でスリープを「なし」にすることを検討してください。
+  Remote Desktop connections may be refused while the PC is asleep. For an always-reachable host, consider setting sleep to "Never" under Settings > System > Power.
 ```
 
-## インストール
+## Installation
 
-Windows 10/11 専用。
+Windows 10/11 only.
 
-[Releases](https://github.com/kwrkb/rdp-host-info/releases) からビルド済みバイナリを取得するのが手軽:
+The easiest way is to grab a prebuilt binary from [Releases](https://github.com/kwrkb/rdp-host-info/releases):
 
-1. 最新リリースから環境に合う zip（`rdp-host-info_<version>_windows_amd64.zip` など）をダウンロード
-2. 展開して `rdp-host-info.exe` を実行
+1. Download the zip matching your environment from the latest release (e.g. `rdp-host-info_<version>_windows_amd64.zip`)
+2. Extract it and run `rdp-host-info.exe`
 
-または `go install`:
+Or via `go install`:
 
 ```powershell
 go install github.com/kwrkb/rdp-host-info@latest
 ```
 
-またはリポジトリから:
+Or from the repository:
 
 ```powershell
 git clone https://github.com/kwrkb/rdp-host-info.git
@@ -61,48 +63,48 @@ cd rdp-host-info
 go build .
 ```
 
-## 使い方
+## Usage
 
-接続を受ける側（ホスト）の PC で実行するだけ:
+Just run it on the PC that will accept the connection (the host):
 
 ```powershell
 rdp-host-info
 ```
 
-- 管理者権限は不要（管理者権限が必要な項目には `(admin required)` が付く）
-- exit code: NG が 1 つでもあれば `1`、それ以外は `0`
-- `rdp-host-info -version` でバージョン表示
+- No administrator privileges required (items that need admin are marked `(admin required)`)
+- Exit code: `1` if any check is `NG`, otherwise `0`
+- `rdp-host-info -version` prints the version
 
-## 出力の読み方
+## Reading the output
 
-| ラベル | 意味 |
+| Label | Meaning |
 |---|---|
-| `[OK]` | 問題なし |
-| `[NG]` | 接続を妨げる問題あり。下の行に対処方法を表示 |
-| `[WARN]` | 接続できるが注意が必要（スリープ設定など） |
-| `[??]` | 確認できなかった（失敗と断定しない）。手動確認方法を表示 |
+| `[OK]` | No problem |
+| `[NG]` | A problem blocks connections; the line below shows how to fix it |
+| `[WARN]` | Connections work but need attention (e.g. sleep settings) |
+| `[??]` | Could not be determined (not treated as a failure); the line below shows how to check manually |
 
-### ユーザー名の形式
+### Username format
 
-RDP クライアントに入力するユーザー名はアカウント種別で異なる。`Username:` 欄に判定結果を表示する:
+The username you type into the RDP client differs by account type. The `Username:` field shows the detected result:
 
-| アカウント種別 | 入力形式 |
+| Account type | Format |
 |---|---|
-| ローカルアカウント | `PC名\ユーザー名` |
-| Microsoft アカウント | `MicrosoftAccount\メールアドレス` |
+| Local account | `PCNAME\username` |
+| Microsoft account | `MicrosoftAccount\email` |
 | Microsoft Entra ID (Azure AD) | `AzureAD\UPN` |
-| ドメイン | `ドメイン名\ユーザー名` |
+| Domain | `DOMAIN\username` |
 
-判定できない場合は候補を複数表示する（断定しない）。Microsoft アカウントでは PIN ではなくアカウントのパスワードが必要。
+When the type can't be determined with confidence, multiple candidates are shown instead of guessing. Microsoft accounts need the account password, not the PIN.
 
-## 制限事項
+## Limitations
 
-- 設定は変更しない。表示された対処方法は手動で実施する
-- Microsoft アカウントの判定は非公開レジストリに依存する best-effort（読めない場合は候補を複数提示）
-- スリープ判定は従来型スリープのタイムアウト値に基づく。Modern Standby (S0) 搭載機では実際の挙動と異なる場合がある
-- ファイアウォール判定は Windows ファイアウォールのみ対象。サードパーティ製セキュリティソフトは別途確認が必要
+- Never changes settings; any remediation shown must be applied manually
+- Microsoft account detection is a best-effort read of an undocumented registry key (falls back to multiple candidates if unreadable)
+- Sleep detection is based on the legacy sleep timeout value; machines using Modern Standby (S0) may behave differently than reported
+- Firewall checks cover only Windows Firewall; third-party security software needs separate verification
 
-## 開発
+## Development
 
 ```powershell
 go build ./...
@@ -111,8 +113,8 @@ go test ./...
 golangci-lint run ./...
 ```
 
-詳細な設計は `VISION.md`（正典仕様）と `PLAN.md` を参照。
+See `VISION.md` (canonical spec) and `PLAN.md` for detailed design.
 
 ## License
 
-MIT License. 詳細は [LICENSE](LICENSE) を参照。
+MIT License. See [LICENSE](LICENSE).
