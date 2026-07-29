@@ -91,3 +91,8 @@
 - **`internal/diag/sleep.go` の `formatDuration` は `msg` パッケージへ移設**: 秒数から "15 minutes" のような英語散文を組み立てる処理を `diag` に残すと、日本語出力時にそこだけ英語が混入する。`diag` は秒数（`uint32`）を `MsgArgs` として渡すだけにし、単位・複数形（"1 minute" / "15 minutes"）・分秒の切り替えは `msg.duration()` に一本化した。移設のついでに `formatDuration(60)` が `"1 minutes"` を返す複数形バグも修正した。
 - **golden テストは en/ja 両方をフルカバー（10→20件）**: Phase 6 で「文言変更が必ず golden 差分に現れる」という回帰検知の仕組みを作った経緯があり、ja だけ一部サンプルに削るとその効力が半分になる。`internal/render/text_test.go` に `-update` フラグを追加し、`go test ./internal/render/... -update` で両言語分を再生成できるようにした。
 - **カタログ完全性テスト（`internal/msg/catalog_test.go`）を必須にした**: `msgid.ID` は文字列型でコンパイラがキーの取りこぼしを検出できないため、`msgid.All`（全 ID 一覧）を en/ja 両方で非空チェックする専用テストを置かないと、カタログの穴が日本語出力への英語混入として silent fail する。
+
+## 2026-07-29: `flag.CommandLine`（ExitOnError）のままでは `-lang` 検証が `-help` を素通りさせる
+- 却下した案: `flag.CommandLine` を使い続け、`flag.Usage` クロージャ内で invalid な `-lang` を検出して英語にフォールバックする（PR #2 実装時点の元実装）
+- 決め手: `flag.CommandLine` は `ExitOnError` のため、`-help` はもちろん未知フラグ等のパースエラーも `flag.Parse()` 内部で `Usage()` を呼んで `os.Exit` する（[documented `FlagSet.Parse` behavior](https://pkg.go.dev/flag#FlagSet.Parse)）。そのため `flag.Parse()` の後ろに置いた `-lang` 検証コードそのものに実行が到達しない。Codex レビューで `rdp-host-info -lang xx -help` と `rdp-host-info -version -lang xx` がともに exit 0 になる（VISION.md「`-lang` に `en`/`ja` 以外の値を渡した場合はエラーで終了する」に違反）と指摘され、実機 e2e でも再現した
+- 覆す条件: なし。`flag.ContinueOnError` の独自 `FlagSet` に切り替え、`Parse` の戻り値（`error`）を見てから `-lang` 検証 → help/エラー処理 → `-version` の順で分岐する方式（`main.go`）に固定する

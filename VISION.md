@@ -251,6 +251,9 @@ Remote Desktop Status
   - ステータスラベル `[OK]` / `[NG]` / `[WARN]` / `[??]`
   - ファイアウォールプロファイル名（`Private` / `Domain+Private` など、Windows 側の名称）
   - IPアドレス、PC名、ユーザー名、`AzureAD\` / `MicrosoftAccount\` プレフィックス
+  - Windows のサービス表示名・グループ名・管理ツール名（`Remote Desktop Services` /
+    `Remote Desktop Users` / `Administrators` / `services.msc` / `wf.msc` など。
+    日本語版 Windows でもこれらは英語表記のまま）
 - OSのUI言語からの自動判定は行わない（挙動を`-lang`の指定だけで予測可能にする）
 
 ---
