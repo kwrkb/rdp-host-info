@@ -175,6 +175,7 @@ type Check interface {
 - **Phase 5 完了**
   - Recommended（Tailscale 優先）と NeedsAdmin ラベルは Phase 1〜3 で実装済みだったためチェックのみ更新
   - rdp_enabled の NG Hint を VISION の 2 行例文に揃えた。firewall の NG Message は英語 Message / 日本語 Hint の規約を優先し VISION の日本語例文（「ネットワークが「パブリック」...」）には揃えない（Hint 側はほぼ一致済み）
+    - **obsolete（2026-07-29）**: 「英語 Message / 日本語 Hint」の暗黙規約は i18n 対応（`internal/msg` カタログ + `-lang`）で廃止。出力言語は VISION.md の「出力言語」節が正典。詳細は LESSONS.md 参照
   - `-version`: stdlib flag + `debug.ReadBuildInfo()` フォールバック（cobra 不採用の方針どおり）
 - **Phase 4 完了**（`hostinfo.Classify` + `winsys.CurrentAccount`、`HostInfo.UserName` → `Login UserLogin` に置換）
   - winsys は生データ（SID/UPN/Join/MSA サブキー）のみ返し、判定・"@" フィルタは hostinfo 側（OS 非依存でテスト可能）

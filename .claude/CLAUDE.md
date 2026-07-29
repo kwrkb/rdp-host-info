@@ -36,9 +36,18 @@ Windows 依存コードは `internal/winsys/*_windows.go` に集約し、ビル�
 
 ### render とデータフロー
 
-`internal/render` の `HostInfoText` / `StatusText` が VISION.md 準拠のテキストを生成する。golden test（`testdata/*.golden`）で出力の回帰を検知する。将来 JSON/GUI 出力を追加する場合もこの層に追加する。
+`internal/render` の `HostInfoText` / `StatusText` が VISION.md 準拠のテキストを生成する。golden test（`testdata/*.golden`、`en`/`ja` 両言語分）で出力の回帰を検知する。将来 JSON/GUI 出力を追加する場合もこの層に追加する。
 
 全体のデータフローは `winsys`（OS からの取得）→ `hostinfo` / `diag`（OS 非依存のロジック・判定）→ `render`（整形）→ `main`（配線・exit code）。exit code は NG が1つでもあれば 1。
+
+### 出力の i18n（msgid / msg）
+
+`internal/diag` と `internal/hostinfo` は文言を一切持たず、`internal/msgid.ID`（+ 値）だけを返す（`diag.Result.MsgID/MsgArgs/HintID/HintArgs`、`hostinfo.UserCandidate.Label`、`hostinfo.UserLogin.Notes` など）。文言は `internal/msg` のカタログ（`msg.Format(lang, id, args...)`）に集約し、`internal/render` が言語を選んで整形する。
+
+- 依存方向は `msgid ← diag/hostinfo`、`msgid ← msg`、`msg ← render` の一方向。**`diag` / `hostinfo` は `msg` を import しない**（文言がロジック層に逆流するのを防ぐ、DI seam の禁止方向と同じ考え方）
+- 新しい Message / Hint / Notes / Label を追加するときは、`internal/msgid/id.go` に ID 定数を足し `msgid.All` にも登録した上で、`internal/msg/catalog.go` に en/ja 両方のエントリを追加する。`internal/msg/catalog_test.go`（`TestCatalogComplete`）が抜け漏れを検出する
+- 秒数から "15 minutes" / "15分" のような単位付き散文を組み立てる処理（`msg.duration`）のように、単純な `%s` 置換で済まない文言は `diag` 側に置かず `msg.Format` 内で ID ごとに特別扱いする（`internal/diag/sleep.go` は秒数だけを `MsgArgs` に渡す）
+- 既定言語は英語（`en`）。`-lang ja` で日本語に切り替える。翻訳する/しないの境界は VISION.md「出力言語」節が正典
 
 ## VISION 由来の必須規約
 

@@ -1,7 +1,10 @@
 // Package diag は RDP 接続受け入れ状態の診断項目（Check）を提供する。
 // OS 非依存であり、Windows からの取得は関数型 provider として注入される
-// （internal/winsys を import しない）。
+// （internal/winsys を import しない）。文言は持たず、internal/msgid の
+// ID と値だけを返す。文言解決は internal/msg・整形は internal/render が担う。
 package diag
+
+import "github.com/kwrkb/rdp-host-info/internal/msgid"
 
 type Status int
 
@@ -16,8 +19,10 @@ type Result struct {
 	Name       string
 	NeedsAdmin bool
 	Status     Status
-	Message    string
-	Hint       string
+	MsgID      msgid.ID
+	MsgArgs    []any
+	HintID     msgid.ID
+	HintArgs   []any
 }
 
 type Check interface {
@@ -38,9 +43,9 @@ func runOne(c Check) (result Result) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = Result{
-				Status:  StatusUnknown,
-				Message: "internal error",
-				Hint:    "この項目は確認できませんでした。手動で確認してください。",
+				Status: StatusUnknown,
+				MsgID:  msgid.InternalError,
+				HintID: msgid.InternalErrorHint,
 			}
 		}
 		result.Name = c.Name()

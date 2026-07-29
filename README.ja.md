@@ -8,35 +8,37 @@
 
 接続がうまくいかないとき、原因はたいてい ホスト側の設定（RDP 無効 / ネットワークがパブリック / ユーザー名の形式違い / スリープ）にある。このツールはそれらを診断して人間向けに表示する。**設定の変更は一切行わない**（診断・表示専用）。
 
-```
-Remote Desktop Host Information
+`rdp-host-info -lang ja` の出力例:
 
-PC Name:
+```
+リモートデスクトップ ホスト情報
+
+PC 名:
   OMEN16
 
 Windows:
   Windows 11 Pro
 
-Connection Address:
-  Local IP:      192.168.1.20
+接続先アドレス:
+  ローカル IP:       192.168.1.20
   Tailscale IP:  100.80.10.5
 
-Username:
-  OMEN16\yugo    (local account)
+ユーザー名:
+  OMEN16\yugo    (ローカルアカウント)
 
-Recommended:
+推奨:
   100.80.10.5
 
-Remote Desktop Status
+リモートデスクトップ状態
 
-[OK] Windows supports Remote Desktop hosting (Windows 11 Pro)
-[OK] Remote Desktop is enabled
-[OK] Remote Desktop Services is running
-[OK] Windows Firewall allows Remote Desktop (Private profile, active)
-[OK] TCP 3389 is listening
-[OK] User is a member of a group allowed to connect (Administrators)
+[OK] Windows はリモートデスクトップのホストに対応しています（Windows 11 Pro）
+[OK] リモートデスクトップが有効です
+[OK] Remote Desktop Services が実行されています
+[OK] Windows ファイアウォールがリモートデスクトップを許可しています（Private プロファイル、有効）
+[OK] TCP 3389 が待ち受けています
+[OK] ユーザーは接続を許可されたグループに所属しています（Administrators）
   これはグループ所属のみの確認です。「リモート デスクトップ サービスを使ったログオンを拒否する」ポリシーで拒否されている場合は、所属していても接続できません。secpol.msc > ローカル ポリシー > ユーザー権利の割り当て で確認してください。
-[WARN] PC sleeps after 15 minutes
+[WARN] PC は 15分 でスリープします
   スリープ中はリモートデスクトップ接続を受け付けられない場合があります。常時接続したい場合は 設定 > システム > 電源 でスリープを「なし」にすることを検討してください。
 ```
 
@@ -74,6 +76,7 @@ rdp-host-info
 - 管理者権限は不要（管理者権限が必要な項目には `(admin required)` が付く）
 - exit code: NG が 1 つでもあれば `1`、それ以外は `0`
 - `rdp-host-info -version` でバージョン表示
+- `rdp-host-info -lang ja` で出力を日本語にする（既定は英語）
 
 ## 出力の読み方
 

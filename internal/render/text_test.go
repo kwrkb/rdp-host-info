@@ -2,21 +2,44 @@ package render
 
 import (
 	"errors"
+	"flag"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/kwrkb/rdp-host-info/internal/diag"
 	"github.com/kwrkb/rdp-host-info/internal/hostinfo"
+	"github.com/kwrkb/rdp-host-info/internal/msg"
+	"github.com/kwrkb/rdp-host-info/internal/msgid"
 )
 
-func readGolden(t *testing.T, name string) string {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join("testdata", name))
-	if err != nil {
-		t.Fatalf("read golden file %s: %v", name, err)
+var update = flag.Bool("update", false, "update golden files")
+
+func goldenPath(lang msg.Lang, name string) string {
+	if lang == msg.Japanese {
+		ext := filepath.Ext(name)
+		name = name[:len(name)-len(ext)] + ".ja" + ext
 	}
-	return string(data)
+	return filepath.Join("testdata", name)
+}
+
+func checkGolden(t *testing.T, lang msg.Lang, name, got string) {
+	t.Helper()
+	path := goldenPath(lang, name)
+	if *update {
+		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+			t.Fatalf("write golden file %s: %v", path, err)
+		}
+		return
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden file %s: %v", path, err)
+	}
+	want := string(data)
+	if got != want {
+		t.Errorf("mismatch for %s:\ngot:\n%s\nwant:\n%s", path, got, want)
+	}
 }
 
 func baseHostInfo(login hostinfo.UserLogin) hostinfo.HostInfo {
@@ -34,6 +57,8 @@ func baseHostInfo(login hostinfo.UserLogin) hostinfo.HostInfo {
 	}
 }
 
+var langs = []msg.Lang{msg.English, msg.Japanese}
+
 func TestHostInfoText(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -45,7 +70,7 @@ func TestHostInfoText(t *testing.T) {
 			golden: "hostinfo.golden",
 			login: hostinfo.UserLogin{
 				AccountType: hostinfo.AccountLocal,
-				Candidates:  []hostinfo.UserCandidate{{Value: `OMEN16\yugo`, Label: "local account"}},
+				Candidates:  []hostinfo.UserCandidate{{Value: `OMEN16\yugo`, Label: msgid.LabelLocalAccount}},
 			},
 		},
 		{
@@ -54,10 +79,10 @@ func TestHostInfoText(t *testing.T) {
 			login: hostinfo.UserLogin{
 				AccountType: hostinfo.AccountMicrosoft,
 				Candidates: []hostinfo.UserCandidate{
-					{Value: `MicrosoftAccount\user@example.com`, Label: "Microsoft account"},
-					{Value: `OMEN16\yugo`, Label: "local account"},
+					{Value: `MicrosoftAccount\user@example.com`, Label: msgid.LabelMicrosoftAccount},
+					{Value: `OMEN16\yugo`, Label: msgid.LabelLocalAccount},
 				},
-				Notes: []string{"Microsoft アカウントでは PIN ではなくアカウントのパスワードでサインインしてください。"},
+				Notes: []msgid.ID{msgid.NoteMSAPassword},
 			},
 		},
 		{
@@ -65,7 +90,7 @@ func TestHostInfoText(t *testing.T) {
 			golden: "hostinfo_azuread.golden",
 			login: hostinfo.UserLogin{
 				AccountType: hostinfo.AccountAzureAD,
-				Candidates:  []hostinfo.UserCandidate{{Value: `AzureAD\yugo@example.com`, Label: "Microsoft Entra ID account"}},
+				Candidates:  []hostinfo.UserCandidate{{Value: `AzureAD\yugo@example.com`, Label: msgid.LabelAzureADAccount}},
 			},
 		},
 		{
@@ -73,7 +98,7 @@ func TestHostInfoText(t *testing.T) {
 			golden: "hostinfo_domain.golden",
 			login: hostinfo.UserLogin{
 				AccountType: hostinfo.AccountDomain,
-				Candidates:  []hostinfo.UserCandidate{{Value: `CORP\yugo`, Label: "domain account"}},
+				Candidates:  []hostinfo.UserCandidate{{Value: `CORP\yugo`, Label: msgid.LabelDomainAccount}},
 			},
 		},
 		{
@@ -81,28 +106,28 @@ func TestHostInfoText(t *testing.T) {
 			golden: "hostinfo_account_unknown.golden",
 			login: hostinfo.UserLogin{
 				AccountType: hostinfo.AccountUnknown,
-				Candidates:  []hostinfo.UserCandidate{{Value: `OMEN16\yugo`, Label: "local account"}},
-				Notes:       []string{`Microsoft アカウントの場合は MicrosoftAccount\メールアドレス 形式も試してください。`},
+				Candidates:  []hostinfo.UserCandidate{{Value: `OMEN16\yugo`, Label: msgid.LabelLocalAccount}},
+				Notes:       []msgid.ID{msgid.NoteMaybeMSA},
 			},
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := HostInfoText(baseHostInfo(tt.login))
-			want := readGolden(t, tt.golden)
-			if got != want {
-				t.Errorf("HostInfoText mismatch:\ngot:\n%s\nwant:\n%s", got, want)
-			}
-		})
+		for _, lang := range langs {
+			t.Run(tt.name+"_"+string(lang), func(t *testing.T) {
+				got := HostInfoText(lang, baseHostInfo(tt.login))
+				checkGolden(t, lang, tt.golden, got)
+			})
+		}
 	}
 }
 
 func TestHostInfoText_UnknownFields(t *testing.T) {
-	got := HostInfoText(hostinfo.HostInfo{})
-	want := readGolden(t, "hostinfo_unknown.golden")
-	if got != want {
-		t.Errorf("HostInfoText mismatch:\ngot:\n%s\nwant:\n%s", got, want)
+	for _, lang := range langs {
+		t.Run(string(lang), func(t *testing.T) {
+			got := HostInfoText(lang, hostinfo.HostInfo{})
+			checkGolden(t, lang, "hostinfo_unknown.golden", got)
+		})
 	}
 }
 
@@ -175,27 +200,27 @@ func TestStatusText_RealChecks(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := StatusText(diag.RunAll(tt.checks))
-			want := readGolden(t, tt.golden)
-			if got != want {
-				t.Errorf("StatusText mismatch:\ngot:\n%s\nwant:\n%s", got, want)
-			}
-		})
+		for _, lang := range langs {
+			t.Run(tt.name+"_"+string(lang), func(t *testing.T) {
+				got := StatusText(lang, diag.RunAll(tt.checks))
+				checkGolden(t, lang, tt.golden, got)
+			})
+		}
 	}
 }
 
 func TestStatusText(t *testing.T) {
 	results := []diag.Result{
-		{Name: "edition", Status: diag.StatusOK, Message: "Windows supports Remote Desktop hosting"},
-		{Name: "rdp_enabled", Status: diag.StatusNG, Message: "Remote Desktop is disabled", Hint: "設定からリモートデスクトップを有効にしてください。"},
-		{Name: "group", Status: diag.StatusUnknown, Message: "group membership could not be determined", NeedsAdmin: true},
-		{Name: "sleep", Status: diag.StatusWarn, Message: "PC sleeps after 15 minutes", Hint: "スリープ中はリモートデスクトップ接続を受け付けられない場合があります。"},
+		{Name: "edition", Status: diag.StatusOK, MsgID: msgid.EditionSupported, MsgArgs: []any{"Windows 11 Pro"}},
+		{Name: "rdp_enabled", Status: diag.StatusNG, MsgID: msgid.RDPDisabled, HintID: msgid.RDPDisabledHint},
+		{Name: "group", Status: diag.StatusUnknown, MsgID: msgid.GroupUnknown, NeedsAdmin: true},
+		{Name: "sleep", Status: diag.StatusWarn, MsgID: msgid.SleepWarnAC, MsgArgs: []any{uint32(900)}, HintID: msgid.SleepWarnHint},
 	}
 
-	got := StatusText(results)
-	want := readGolden(t, "status.golden")
-	if got != want {
-		t.Errorf("StatusText mismatch:\ngot:\n%s\nwant:\n%s", got, want)
+	for _, lang := range langs {
+		t.Run(string(lang), func(t *testing.T) {
+			got := StatusText(lang, results)
+			checkGolden(t, lang, "status.golden", got)
+		})
 	}
 }

@@ -1,5 +1,7 @@
 package diag
 
+import "github.com/kwrkb/rdp-host-info/internal/msgid"
+
 type RDPEnabledCheck struct {
 	// ReadDWORD は HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server の
 	// fDenyTSConnections を読む関数を注入する。
@@ -18,22 +20,22 @@ func (c RDPEnabledCheck) Run() Result {
 	v, err := c.ReadDWORD(terminalServerKey, denyTSConnections)
 	if err != nil {
 		return Result{
-			Status:  StatusUnknown,
-			Message: "Remote Desktop enabled state could not be determined",
-			Hint:    "設定 > システム > リモートデスクトップ で状態を確認してください。",
+			Status: StatusUnknown,
+			MsgID:  msgid.RDPEnabledUnknown,
+			HintID: msgid.RDPEnabledUnknownHint,
 		}
 	}
 
 	if v != 0 {
 		return Result{
-			Status:  StatusNG,
-			Message: "Remote Desktop is disabled",
-			Hint:    "Windowsの設定からリモートデスクトップを有効にしてください。\n設定 > システム > リモートデスクトップ",
+			Status: StatusNG,
+			MsgID:  msgid.RDPDisabled,
+			HintID: msgid.RDPDisabledHint,
 		}
 	}
 
 	return Result{
-		Status:  StatusOK,
-		Message: "Remote Desktop is enabled",
+		Status: StatusOK,
+		MsgID:  msgid.RDPEnabled,
 	}
 }

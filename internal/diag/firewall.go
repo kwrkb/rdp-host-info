@@ -1,5 +1,7 @@
 package diag
 
+import "github.com/kwrkb/rdp-host-info/internal/msgid"
+
 // アクティブプロファイルのビットマスク。NET_FW_PROFILE_TYPE2 と同値。
 const (
 	FwProfileDomain  uint32 = 1
@@ -27,37 +29,39 @@ func (c FirewallCheck) Run() Result {
 	active, enabled, viaFallback, err := c.Query(port)
 	if err != nil {
 		return Result{
-			Status:  StatusUnknown,
-			Message: "Windows Firewall state could not be determined",
-			Hint:    "wf.msc（セキュリティが強化された Windows ファイアウォール）で「リモート デスクトップ」の受信ルールを確認してください。",
+			Status: StatusUnknown,
+			MsgID:  msgid.FirewallUnknown,
+			HintID: msgid.FirewallUnknownHint,
 		}
 	}
 
 	profiles := profileNames(active)
 
 	if enabled {
-		note := ""
+		id := msgid.FirewallOK
 		if viaFallback {
-			note = ", port rule"
+			id = msgid.FirewallOKFallback
 		}
 		return Result{
 			Status:  StatusOK,
-			Message: "Windows Firewall allows Remote Desktop (" + profiles + " profile, active" + note + ")",
+			MsgID:   id,
+			MsgArgs: []any{profiles},
 		}
 	}
 
 	if active == FwProfilePublic {
 		return Result{
-			Status:  StatusNG,
-			Message: "Network is set to Public and Remote Desktop is not allowed",
-			Hint:    "ファイアウォールのリモートデスクトップ許可が、現在のネットワークに適用されていません。設定 > ネットワークとインターネット でネットワークを「プライベート」に変更してください。",
+			Status: StatusNG,
+			MsgID:  msgid.FirewallPublicBlocked,
+			HintID: msgid.FirewallPublicBlockedHint,
 		}
 	}
 
 	return Result{
 		Status:  StatusNG,
-		Message: "Windows Firewall blocks Remote Desktop (" + profiles + " profile, active)",
-		Hint:    "wf.msc で「リモート デスクトップ」の受信ルールを現在のプロファイルで有効にしてください。サードパーティ製セキュリティソフト使用時は、そちらの設定も確認してください。",
+		MsgID:   msgid.FirewallBlocked,
+		MsgArgs: []any{profiles},
+		HintID:  msgid.FirewallBlockedHint,
 	}
 }
 

@@ -2,10 +2,11 @@ package diag
 
 import (
 	"errors"
-	"strings"
+	"reflect"
 	"testing"
 
 	"github.com/kwrkb/rdp-host-info/internal/hostinfo"
+	"github.com/kwrkb/rdp-host-info/internal/msgid"
 )
 
 func TestEditionSupportCheck(t *testing.T) {
@@ -159,51 +160,58 @@ func TestFirewallCheck(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		query   func(uint32) (uint32, bool, bool, error)
-		status  Status
-		wantMsg string // 空でなければ Message に含まれること
+		name      string
+		query     func(uint32) (uint32, bool, bool, error)
+		status    Status
+		wantMsgID msgid.ID
+		wantArgs  []any // nil に対しては検証しない
 	}{
 		{
-			name:   "query error is unknown",
-			query:  query(0, false, false, errors.New("COM failure")),
-			status: StatusUnknown,
+			name:      "query error is unknown",
+			query:     query(0, false, false, errors.New("COM failure")),
+			status:    StatusUnknown,
+			wantMsgID: msgid.FirewallUnknown,
 		},
 		{
-			name:    "enabled on private",
-			query:   query(FwProfilePrivate, true, false, nil),
-			status:  StatusOK,
-			wantMsg: "(Private profile, active)",
+			name:      "enabled on private",
+			query:     query(FwProfilePrivate, true, false, nil),
+			status:    StatusOK,
+			wantMsgID: msgid.FirewallOK,
+			wantArgs:  []any{"Private"},
 		},
 		{
-			name:    "enabled on domain and private",
-			query:   query(FwProfileDomain|FwProfilePrivate, true, false, nil),
-			status:  StatusOK,
-			wantMsg: "(Domain+Private profile, active)",
+			name:      "enabled on domain and private",
+			query:     query(FwProfileDomain|FwProfilePrivate, true, false, nil),
+			status:    StatusOK,
+			wantMsgID: msgid.FirewallOK,
+			wantArgs:  []any{"Domain+Private"},
 		},
 		{
-			name:    "enabled via fallback rule enumeration",
-			query:   query(FwProfilePrivate, true, true, nil),
-			status:  StatusOK,
-			wantMsg: "port rule",
+			name:      "enabled via fallback rule enumeration",
+			query:     query(FwProfilePrivate, true, true, nil),
+			status:    StatusOK,
+			wantMsgID: msgid.FirewallOKFallback,
+			wantArgs:  []any{"Private"},
 		},
 		{
-			name:    "disabled on public only network",
-			query:   query(FwProfilePublic, false, false, nil),
-			status:  StatusNG,
-			wantMsg: "Public",
+			name:      "disabled on public only network",
+			query:     query(FwProfilePublic, false, false, nil),
+			status:    StatusNG,
+			wantMsgID: msgid.FirewallPublicBlocked,
 		},
 		{
-			name:    "disabled on private",
-			query:   query(FwProfilePrivate, false, false, nil),
-			status:  StatusNG,
-			wantMsg: "blocks Remote Desktop",
+			name:      "disabled on private",
+			query:     query(FwProfilePrivate, false, false, nil),
+			status:    StatusNG,
+			wantMsgID: msgid.FirewallBlocked,
+			wantArgs:  []any{"Private"},
 		},
 		{
-			name:    "no active profile does not crash",
-			query:   query(0, true, false, nil),
-			status:  StatusOK,
-			wantMsg: "(none profile, active)",
+			name:      "no active profile does not crash",
+			query:     query(0, true, false, nil),
+			status:    StatusOK,
+			wantMsgID: msgid.FirewallOK,
+			wantArgs:  []any{"none"},
 		},
 	}
 
@@ -214,8 +222,11 @@ func TestFirewallCheck(t *testing.T) {
 			if got.Status != tt.status {
 				t.Errorf("Status = %v, want %v", got.Status, tt.status)
 			}
-			if tt.wantMsg != "" && !strings.Contains(got.Message, tt.wantMsg) {
-				t.Errorf("Message = %q, want substring %q", got.Message, tt.wantMsg)
+			if got.MsgID != tt.wantMsgID {
+				t.Errorf("MsgID = %v, want %v", got.MsgID, tt.wantMsgID)
+			}
+			if tt.wantArgs != nil && !reflect.DeepEqual(got.MsgArgs, tt.wantArgs) {
+				t.Errorf("MsgArgs = %v, want %v", got.MsgArgs, tt.wantArgs)
 			}
 		})
 	}
@@ -226,39 +237,40 @@ func TestGroupMembershipCheck(t *testing.T) {
 	const seGroupUseForDenyOnly = 0x00000010
 
 	tests := []struct {
-		name    string
-		list    func() ([]TokenGroup, error)
-		status  Status
-		wantMsg string
+		name      string
+		list      func() ([]TokenGroup, error)
+		status    Status
+		wantMsgID msgid.ID
 	}{
 		{
-			name:   "list error is unknown",
-			list:   func() ([]TokenGroup, error) { return nil, errors.New("access denied") },
-			status: StatusUnknown,
+			name:      "list error is unknown",
+			list:      func() ([]TokenGroup, error) { return nil, errors.New("access denied") },
+			status:    StatusUnknown,
+			wantMsgID: msgid.GroupUnknown,
 		},
 		{
 			name: "administrators enabled",
 			list: func() ([]TokenGroup, error) {
 				return []TokenGroup{{SID: SIDAdministrators, Attributes: seGroupEnabled}}, nil
 			},
-			status:  StatusOK,
-			wantMsg: "(Administrators)",
+			status:    StatusOK,
+			wantMsgID: msgid.GroupOKAdmin,
 		},
 		{
 			name: "administrators deny-only counts as member",
 			list: func() ([]TokenGroup, error) {
 				return []TokenGroup{{SID: SIDAdministrators, Attributes: seGroupUseForDenyOnly}}, nil
 			},
-			status:  StatusOK,
-			wantMsg: "(Administrators)",
+			status:    StatusOK,
+			wantMsgID: msgid.GroupOKAdmin,
 		},
 		{
 			name: "remote desktop users only",
 			list: func() ([]TokenGroup, error) {
 				return []TokenGroup{{SID: SIDRemoteDesktopUsers, Attributes: seGroupEnabled}}, nil
 			},
-			status:  StatusOK,
-			wantMsg: "(Remote Desktop Users)",
+			status:    StatusOK,
+			wantMsgID: msgid.GroupOKRDU,
 		},
 		{
 			name: "both groups",
@@ -268,20 +280,22 @@ func TestGroupMembershipCheck(t *testing.T) {
 					{SID: SIDRemoteDesktopUsers, Attributes: seGroupEnabled},
 				}, nil
 			},
-			status:  StatusOK,
-			wantMsg: "(Administrators, Remote Desktop Users)",
+			status:    StatusOK,
+			wantMsgID: msgid.GroupOKBoth,
 		},
 		{
 			name: "unrelated groups only",
 			list: func() ([]TokenGroup, error) {
 				return []TokenGroup{{SID: "S-1-5-32-545", Attributes: seGroupEnabled}}, nil
 			},
-			status: StatusNG,
+			status:    StatusNG,
+			wantMsgID: msgid.GroupNotMember,
 		},
 		{
-			name:   "empty group list",
-			list:   func() ([]TokenGroup, error) { return nil, nil },
-			status: StatusNG,
+			name:      "empty group list",
+			list:      func() ([]TokenGroup, error) { return nil, nil },
+			status:    StatusNG,
+			wantMsgID: msgid.GroupNotMember,
 		},
 	}
 
@@ -292,8 +306,8 @@ func TestGroupMembershipCheck(t *testing.T) {
 			if got.Status != tt.status {
 				t.Errorf("Status = %v, want %v", got.Status, tt.status)
 			}
-			if tt.wantMsg != "" && !strings.Contains(got.Message, tt.wantMsg) {
-				t.Errorf("Message = %q, want substring %q", got.Message, tt.wantMsg)
+			if got.MsgID != tt.wantMsgID {
+				t.Errorf("MsgID = %v, want %v", got.MsgID, tt.wantMsgID)
 			}
 		})
 	}
@@ -305,49 +319,57 @@ func TestSleepCheck(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		read    func() (uint32, uint32, bool, error)
-		status  Status
-		wantMsg string
+		name      string
+		read      func() (uint32, uint32, bool, error)
+		status    Status
+		wantMsgID msgid.ID
+		wantArgs  []any
 	}{
 		{
-			name:   "read error is unknown",
-			read:   read(0, 0, false, errors.New("boom")),
-			status: StatusUnknown,
+			name:      "read error is unknown",
+			read:      read(0, 0, false, errors.New("boom")),
+			status:    StatusUnknown,
+			wantMsgID: msgid.SleepUnknown,
 		},
 		{
-			name:   "never sleeps without battery",
-			read:   read(0, 0, false, nil),
-			status: StatusOK,
+			name:      "never sleeps without battery",
+			read:      read(0, 0, false, nil),
+			status:    StatusOK,
+			wantMsgID: msgid.SleepNever,
 		},
 		{
-			name:   "never sleeps with battery",
-			read:   read(0, 0, true, nil),
-			status: StatusOK,
+			name:      "never sleeps with battery",
+			read:      read(0, 0, true, nil),
+			status:    StatusOK,
+			wantMsgID: msgid.SleepNever,
 		},
 		{
-			name:    "sleeps on AC without battery",
-			read:    read(900, 0, false, nil),
-			status:  StatusWarn,
-			wantMsg: "15 minutes",
+			name:      "sleeps on AC without battery",
+			read:      read(900, 0, false, nil),
+			status:    StatusWarn,
+			wantMsgID: msgid.SleepWarnAC,
+			wantArgs:  []any{uint32(900)},
 		},
 		{
-			name:    "sleeps on AC and battery",
-			read:    read(900, 600, true, nil),
-			status:  StatusWarn,
-			wantMsg: "15 minutes (plugged in) / 10 minutes (on battery)",
+			name:      "sleeps on AC and battery",
+			read:      read(900, 600, true, nil),
+			status:    StatusWarn,
+			wantMsgID: msgid.SleepWarnBoth,
+			wantArgs:  []any{uint32(900), uint32(600)},
 		},
 		{
-			name:    "sleeps on battery only",
-			read:    read(0, 600, true, nil),
-			status:  StatusWarn,
-			wantMsg: "10 minutes (on battery)",
+			name:      "sleeps on battery only",
+			read:      read(0, 600, true, nil),
+			status:    StatusWarn,
+			wantMsgID: msgid.SleepWarnDC,
+			wantArgs:  []any{uint32(600)},
 		},
 		{
-			name:    "non-whole-minute timeout shown in seconds",
-			read:    read(90, 0, false, nil),
-			status:  StatusWarn,
-			wantMsg: "90 seconds",
+			name:      "non-whole-minute timeout shown in seconds",
+			read:      read(90, 0, false, nil),
+			status:    StatusWarn,
+			wantMsgID: msgid.SleepWarnAC,
+			wantArgs:  []any{uint32(90)},
 		},
 	}
 
@@ -358,8 +380,11 @@ func TestSleepCheck(t *testing.T) {
 			if got.Status != tt.status {
 				t.Errorf("Status = %v, want %v", got.Status, tt.status)
 			}
-			if tt.wantMsg != "" && !strings.Contains(got.Message, tt.wantMsg) {
-				t.Errorf("Message = %q, want substring %q", got.Message, tt.wantMsg)
+			if got.MsgID != tt.wantMsgID {
+				t.Errorf("MsgID = %v, want %v", got.MsgID, tt.wantMsgID)
+			}
+			if tt.wantArgs != nil && !reflect.DeepEqual(got.MsgArgs, tt.wantArgs) {
+				t.Errorf("MsgArgs = %v, want %v", got.MsgArgs, tt.wantArgs)
 			}
 		})
 	}

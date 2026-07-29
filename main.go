@@ -8,6 +8,8 @@ import (
 
 	"github.com/kwrkb/rdp-host-info/internal/diag"
 	"github.com/kwrkb/rdp-host-info/internal/hostinfo"
+	"github.com/kwrkb/rdp-host-info/internal/msg"
+	"github.com/kwrkb/rdp-host-info/internal/msgid"
 	"github.com/kwrkb/rdp-host-info/internal/render"
 	"github.com/kwrkb/rdp-host-info/internal/winsys"
 )
@@ -15,27 +17,14 @@ import (
 // version はリリースビルド時に -ldflags "-X main.version=v0.1.0" で上書きする。
 var version = "dev"
 
-const usageText = `rdp-host-info - show RDP connection info and check host readiness (Windows)
-
-Usage: rdp-host-info [options]
-
-Run on the PC that accepts Remote Desktop connections (the host).
-Prints the connection info a client needs (PC name, IP addresses,
-username format by account type) and diagnoses whether the host can
-accept connections, as [OK]/[NG]/[WARN]/[??] lines with fix hints.
-
-Diagnosis only: never changes any Windows settings.
-Admin rights are not required; checks that need them are labeled
-"(admin required)". Exits 1 if any check is [NG], otherwise 0.
-
-Options:
-  -help       print this help
-  -version    print version and exit
-`
-
 func main() {
+	langFlag := flag.String("lang", string(msg.English), `output language: "en" or "ja"`)
 	flag.Usage = func() {
-		_, _ = fmt.Fprint(flag.CommandLine.Output(), usageText)
+		lang := msg.Lang(*langFlag)
+		if !msg.ValidLang(lang) {
+			lang = msg.English
+		}
+		_, _ = fmt.Fprint(flag.CommandLine.Output(), msg.Format(lang, msgid.UsageText))
 	}
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
@@ -44,6 +33,13 @@ func main() {
 		fmt.Println("rdp-host-info " + resolveVersion())
 		return
 	}
+
+	lang := msg.Lang(*langFlag)
+	if !msg.ValidLang(lang) {
+		fmt.Fprintf(os.Stderr, "invalid -lang value: %q (expected \"en\" or \"ja\")\n", *langFlag)
+		os.Exit(2)
+	}
+
 	info := hostinfo.Collect(hostinfo.Providers{
 		ComputerName: winsys.ComputerName,
 		Edition:      winsys.ReadEdition,
@@ -55,9 +51,9 @@ func main() {
 	checks := buildChecks()
 	results := diag.RunAll(checks)
 
-	fmt.Print(render.HostInfoText(info))
+	fmt.Print(render.HostInfoText(lang, info))
 	fmt.Println()
-	fmt.Print(render.StatusText(results))
+	fmt.Print(render.StatusText(lang, results))
 
 	os.Exit(exitCode(results))
 }
