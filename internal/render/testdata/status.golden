@@ -1,8 +1,9 @@
 Remote Desktop Status
 
-[OK] Windows supports Remote Desktop hosting
+[OK] Windows supports Remote Desktop hosting (Windows 11 Pro)
 [NG] Remote Desktop is disabled
-  設定からリモートデスクトップを有効にしてください。
-[??] group membership could not be determined (admin required)
+  Enable Remote Desktop from Windows Settings.
+  Settings > System > Remote Desktop
+[??] Group membership could not be determined (admin required)
 [WARN] PC sleeps after 15 minutes
-  スリープ中はリモートデスクトップ接続を受け付けられない場合があります。
+  Remote Desktop connections may be refused while the PC is asleep. For an always-reachable host, consider setting sleep to "Never" under Settings > System > Power.

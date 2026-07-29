@@ -1,6 +1,6 @@
 package diag
 
-import "strconv"
+import "github.com/kwrkb/rdp-host-info/internal/msgid"
 
 type PortListeningCheck struct {
 	// ReadPort は設定されたRDPポートを返す。fromRegistry が false の場合は
@@ -20,26 +20,32 @@ func (c PortListeningCheck) Run() Result {
 	if err != nil {
 		return Result{
 			Status:  StatusUnknown,
-			Message: "TCP " + strconv.Itoa(int(port)) + " listening state could not be determined",
-			Hint:    "コマンドプロンプトで netstat -an を実行し、該当ポートの状態を確認してください。",
+			MsgID:   msgid.PortUnknown,
+			MsgArgs: []any{port},
+			HintID:  msgid.PortUnknownHint,
 		}
-	}
-
-	portNote := ""
-	if !fromRegistry {
-		portNote = " (assumed default)"
 	}
 
 	if !listening {
+		id := msgid.PortNotListening
+		if !fromRegistry {
+			id = msgid.PortNotListeningAssumed
+		}
 		return Result{
 			Status:  StatusNG,
-			Message: "TCP " + strconv.Itoa(int(port)) + portNote + " is not listening",
-			Hint:    "Remote Desktop Services が起動しているか、リモートデスクトップが有効になっているか確認してください。",
+			MsgID:   id,
+			MsgArgs: []any{port},
+			HintID:  msgid.PortNotListeningHint,
 		}
 	}
 
+	id := msgid.PortListening
+	if !fromRegistry {
+		id = msgid.PortListeningAssumed
+	}
 	return Result{
 		Status:  StatusOK,
-		Message: "TCP " + strconv.Itoa(int(port)) + portNote + " is listening",
+		MsgID:   id,
+		MsgArgs: []any{port},
 	}
 }

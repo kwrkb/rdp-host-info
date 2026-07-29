@@ -1,6 +1,10 @@
 package hostinfo
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/kwrkb/rdp-host-info/internal/msgid"
+)
 
 type AccountType int
 
@@ -14,15 +18,15 @@ const (
 
 // UserCandidate は接続元で入力するユーザー名の候補 1 件。
 type UserCandidate struct {
-	Value string // 例: `OMEN16\yugo`, `MicrosoftAccount\user@example.com`
-	Label string // 例: "local account", "Microsoft account"
+	Value string   // 例: `OMEN16\yugo`, `MicrosoftAccount\user@example.com`
+	Label msgid.ID // 例: msgid.LabelLocalAccount, msgid.LabelMicrosoftAccount
 }
 
 // UserLogin はアカウント種別判定の結果。Candidates は確度順。
 type UserLogin struct {
 	AccountType AccountType
 	Candidates  []UserCandidate
-	Notes       []string
+	Notes       []msgid.ID
 }
 
 // AccountData は winsys が返す生データ。判定ロジックは持たない。
@@ -57,13 +61,13 @@ func Classify(pcName string, a AccountData) UserLogin {
 		if a.UPN != "" {
 			return UserLogin{
 				AccountType: AccountAzureAD,
-				Candidates:  []UserCandidate{{Value: `AzureAD\` + a.UPN, Label: "Microsoft Entra ID account"}},
+				Candidates:  []UserCandidate{{Value: `AzureAD\` + a.UPN, Label: msgid.LabelAzureADAccount}},
 			}
 		}
 		return UserLogin{
 			AccountType: AccountAzureAD,
-			Candidates:  []UserCandidate{{Value: `AzureAD\` + a.User, Label: "Microsoft Entra ID account"}},
-			Notes:       []string{"正確な UPN はこの PC で whoami /upn を実行して確認してください。"},
+			Candidates:  []UserCandidate{{Value: `AzureAD\` + a.User, Label: msgid.LabelAzureADAccount}},
+			Notes:       []msgid.ID{msgid.NoteAzureADUPN},
 		}
 	}
 
@@ -71,7 +75,7 @@ func Classify(pcName string, a AccountData) UserLogin {
 	if a.DomainJoined && !strings.EqualFold(a.Domain, pcName) {
 		return UserLogin{
 			AccountType: AccountDomain,
-			Candidates:  []UserCandidate{{Value: a.Domain + `\` + a.User, Label: "domain account"}},
+			Candidates:  []UserCandidate{{Value: a.Domain + `\` + a.User, Label: msgid.LabelDomainAccount}},
 		}
 	}
 
@@ -81,28 +85,28 @@ func Classify(pcName string, a AccountData) UserLogin {
 		if len(emails) > 0 {
 			candidates := make([]UserCandidate, 0, len(emails)+1)
 			for _, email := range emails {
-				candidates = append(candidates, UserCandidate{Value: `MicrosoftAccount\` + email, Label: "Microsoft account"})
+				candidates = append(candidates, UserCandidate{Value: `MicrosoftAccount\` + email, Label: msgid.LabelMicrosoftAccount})
 			}
-			candidates = append(candidates, UserCandidate{Value: pcName + `\` + a.User, Label: "local account"})
+			candidates = append(candidates, UserCandidate{Value: pcName + `\` + a.User, Label: msgid.LabelLocalAccount})
 			return UserLogin{
 				AccountType: AccountMicrosoft,
 				Candidates:  candidates,
-				Notes:       []string{"Microsoft アカウントでは PIN ではなくアカウントのパスワードでサインインしてください。"},
+				Notes:       []msgid.ID{msgid.NoteMSAPassword},
 			}
 		}
 
 		// 4. ローカル: MSA の痕跡なし
 		return UserLogin{
 			AccountType: AccountLocal,
-			Candidates:  []UserCandidate{{Value: pcName + `\` + a.User, Label: "local account"}},
+			Candidates:  []UserCandidate{{Value: pcName + `\` + a.User, Label: msgid.LabelLocalAccount}},
 		}
 	}
 
 	// 5. MSA レジストリを読めなかった: ローカルか MSA か断定できない
 	return UserLogin{
 		AccountType: AccountUnknown,
-		Candidates:  []UserCandidate{{Value: pcName + `\` + a.User, Label: "local account"}},
-		Notes:       []string{`Microsoft アカウントの場合は MicrosoftAccount\メールアドレス 形式も試してください。`},
+		Candidates:  []UserCandidate{{Value: pcName + `\` + a.User, Label: msgid.LabelLocalAccount}},
+		Notes:       []msgid.ID{msgid.NoteMaybeMSA},
 	}
 }
 

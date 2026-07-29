@@ -74,6 +74,7 @@ rdp-host-info
 - No administrator privileges required (items that need admin are marked `(admin required)`)
 - Exit code: `1` if any check is `NG`, otherwise `0`
 - `rdp-host-info -version` prints the version
+- `rdp-host-info -lang ja` prints the same output in Japanese (default is English)
 
 ## Reading the output
 

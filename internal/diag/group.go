@@ -1,5 +1,7 @@
 package diag
 
+import "github.com/kwrkb/rdp-host-info/internal/msgid"
+
 // RDP接続を許可する well-known SID。
 const (
 	SIDRemoteDesktopUsers = "S-1-5-32-555"
@@ -26,9 +28,9 @@ func (c GroupMembershipCheck) Run() Result {
 	groups, err := c.ListTokenGroups()
 	if err != nil {
 		return Result{
-			Status:  StatusUnknown,
-			Message: "Group membership could not be determined",
-			Hint:    "lusrmgr.msc または 設定 > システム > リモートデスクトップ で、ユーザーが Remote Desktop Users か Administrators に含まれるか確認してください。",
+			Status: StatusUnknown,
+			MsgID:  msgid.GroupUnknown,
+			HintID: msgid.GroupUnknownHint,
 		}
 	}
 
@@ -45,29 +47,26 @@ func (c GroupMembershipCheck) Run() Result {
 
 	if !isAdmin && !isRDU {
 		return Result{
-			Status:  StatusNG,
-			Message: "User is not in Remote Desktop Users or Administrators",
-			Hint:    "設定 > システム > リモートデスクトップ > リモートデスクトップユーザー から、接続に使うユーザーを追加してください。",
+			Status: StatusNG,
+			MsgID:  msgid.GroupNotMember,
+			HintID: msgid.GroupNotMemberHint,
 		}
 	}
 
-	names := ""
-	if isAdmin {
-		names = "Administrators"
-	}
-	if isRDU {
-		if names != "" {
-			names += ", "
-		}
-		names += "Remote Desktop Users"
+	// グループ所属のみの確認であり、「リモート デスクトップ サービスを使った
+	// ログオンを拒否する」ポリシーで拒否されている場合は所属していても
+	// 接続できない（このチェックでは検出できない）ため、断定を避ける（GroupOKHint）。
+	id := msgid.GroupOKRDU
+	switch {
+	case isAdmin && isRDU:
+		id = msgid.GroupOKBoth
+	case isAdmin:
+		id = msgid.GroupOKAdmin
 	}
 
 	return Result{
-		Status:  StatusOK,
-		Message: "User is a member of a group allowed to connect (" + names + ")",
-		// グループ所属のみの確認であり、「リモート デスクトップ サービスを使った
-		// ログオンを拒否する」ポリシーで拒否されている場合は所属していても
-		// 接続できない（このチェックでは検出できない）ため、断定を避ける。
-		Hint: "これはグループ所属のみの確認です。「リモート デスクトップ サービスを使ったログオンを拒否する」ポリシーで拒否されている場合は、所属していても接続できません。secpol.msc > ローカル ポリシー > ユーザー権利の割り当て で確認してください。",
+		Status: StatusOK,
+		MsgID:  id,
+		HintID: msgid.GroupOKHint,
 	}
 }

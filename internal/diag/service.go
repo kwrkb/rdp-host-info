@@ -1,5 +1,7 @@
 package diag
 
+import "github.com/kwrkb/rdp-host-info/internal/msgid"
+
 type ServiceRunningCheck struct {
 	ServiceName  string
 	DisplayName  string
@@ -14,21 +16,25 @@ func (c ServiceRunningCheck) Run() Result {
 	if err != nil {
 		return Result{
 			Status:  StatusUnknown,
-			Message: c.DisplayName + " status could not be determined",
-			Hint:    "サービスの状態を確認できませんでした。services.msc で確認してください。",
+			MsgID:   msgid.ServiceUnknown,
+			MsgArgs: []any{c.DisplayName},
+			HintID:  msgid.ServiceUnknownHint,
 		}
 	}
 
 	if !running {
 		return Result{
-			Status:  StatusNG,
-			Message: c.DisplayName + " is not running",
-			Hint:    "services.msc から " + c.DisplayName + " を開始してください。",
+			Status:   StatusNG,
+			MsgID:    msgid.ServiceNotRunning,
+			MsgArgs:  []any{c.DisplayName},
+			HintID:   msgid.ServiceNotRunningHint,
+			HintArgs: []any{c.DisplayName},
 		}
 	}
 
 	return Result{
 		Status:  StatusOK,
-		Message: c.DisplayName + " is running",
+		MsgID:   msgid.ServiceRunning,
+		MsgArgs: []any{c.DisplayName},
 	}
 }

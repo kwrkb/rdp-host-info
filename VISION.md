@@ -86,19 +86,19 @@ Windowsのリモートデスクトップは、接続先PCで確認すべき項�
 例:
 
 ```
-[NG] リモートデスクトップが無効です
+[NG] Remote Desktop is disabled
 
-Windowsの設定からリモートデスクトップを有効にしてください。
-設定 > システム > リモートデスクトップ
+Enable Remote Desktop from Windows Settings.
+Settings > System > Remote Desktop
 
-[NG] ネットワークが「パブリック」に設定されています
+[NG] Network is set to Public and Remote Desktop is not allowed
 
-ファイアウォールのリモートデスクトップ許可が、現在のネットワークに
-適用されていません。ネットワークを「プライベート」に変更してください。
+The firewall's Remote Desktop allowance does not apply to the current
+network. Change the network to Private.
 
-[WARN] このPCは15分後にスリープします
+[WARN] PC sleeps after 15 minutes
 
-スリープ中はリモートデスクトップ接続を受け付けられません。
+Remote Desktop connections may be refused while the PC is asleep.
 ```
 
 ---
@@ -239,6 +239,22 @@ Remote Desktop Status
 - 人間向けの標準出力
 - コピーしやすい簡潔な接続情報
 - 問題がある項目への短い説明
+
+### 出力言語
+
+出力（ヘッダー・Message・Hint・Notes を含む全文言）は既定で英語とし、`-lang ja` で日本語に切り替えられるようにする。
+
+- 既定は英語（`-lang` 未指定 = `en`）
+- `-lang ja` で全文言が日本語になる（英語との混在は許容しない）
+- `-lang` に `en` / `ja` 以外の値を渡した場合はエラーで終了する（黙って既定言語にフォールバックしない）
+- 翻訳しない（言語非依存の識別子として扱う）:
+  - ステータスラベル `[OK]` / `[NG]` / `[WARN]` / `[??]`
+  - ファイアウォールプロファイル名（`Private` / `Domain+Private` など、Windows 側の名称）
+  - IPアドレス、PC名、ユーザー名、`AzureAD\` / `MicrosoftAccount\` プレフィックス
+  - Windows のサービス表示名・グループ名・管理ツール名（`Remote Desktop Services` /
+    `Remote Desktop Users` / `Administrators` / `services.msc` / `wf.msc` など。
+    日本語版 Windows でもこれらは英語表記のまま）
+- OSのUI言語からの自動判定は行わない（挙動を`-lang`の指定だけで予測可能にする）
 
 ---
 

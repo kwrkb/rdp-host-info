@@ -1,7 +1,7 @@
 Remote Desktop Status
 
 [NG] Windows 11 Home does not support Remote Desktop hosting
-  Windows Home エディションはリモートデスクトップのホストになれません。Pro/Enterprise/Education への変更が必要です。
+  Windows Home cannot host Remote Desktop. Upgrade to Pro/Enterprise/Education.
 [NG] Remote Desktop is disabled
-  Windowsの設定からリモートデスクトップを有効にしてください。
-  設定 > システム > リモートデスクトップ
+  Enable Remote Desktop from Windows Settings.
+  Settings > System > Remote Desktop

@@ -1,10 +1,10 @@
 Remote Desktop Status
 
 [??] Windows edition could not be determined
-  設定 > システム > バージョン情報 でエディションを確認してください。
+  Check Settings > System > About for your edition.
 [??] Remote Desktop enabled state could not be determined
-  設定 > システム > リモートデスクトップ で状態を確認してください。
+  Check Settings > System > Remote Desktop.
 [??] Windows Firewall state could not be determined
-  wf.msc（セキュリティが強化された Windows ファイアウォール）で「リモート デスクトップ」の受信ルールを確認してください。
+  Check the Remote Desktop inbound rule in wf.msc (Windows Firewall with Advanced Security).
 [??] Group membership could not be determined
-  lusrmgr.msc または 設定 > システム > リモートデスクトップ で、ユーザーが Remote Desktop Users か Administrators に含まれるか確認してください。
+  Check in lusrmgr.msc or Settings > System > Remote Desktop whether the user is a member of Remote Desktop Users or Administrators.

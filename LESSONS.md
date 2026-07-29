@@ -82,3 +82,17 @@
 - **golangci-lint のバージョン選定は go.mod のターゲット Go に強く依存する**: バイナリ配布版（`golangci-lint-action` の既定）は latest でも古い Go でビルドされており、`go.mod` の `go 1.26.5`（非常に新しい）を解釈できず `can't load config` で失敗する。`install-mode: goinstall` でも `version: latest` は v1 系（`.golangci.yml` の v2 config schema と非互換）を解決してしまい、かつ v2 系はモジュールパスが `github.com/golangci/golangci-lint/v2/...` に変わっているため `install-mode: goinstall` 自体が非対応（`invalid version: unknown revision cmd/golangci-lint/v2.12.2`）。最終的にアクションを使わず `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2` を CI ステップで直接実行する方式に落ち着いた。
 - **CI は windows-latest 固定が必須**: `internal/winsys/*_windows.go` が `//go:build windows` のため `GOOS=linux go build ./...` はビルド不能（`undefined: winsys.ReadEdition` 等）。matrix に linux を足さない。
 - **リリースビルド（GoReleaser）は ubuntu-latest からのクロスコンパイルで十分**: 依存（`golang.org/x/sys`, `go-ole`）は cgo 不要の純 Go のため、Windows amd64/arm64 バイナリを Linux ランナーから生成できる。CI（実行・lint 検証）と Release（成果物ビルド）で runner を使い分けた。
+
+## Phase 8 — CLI 出力の i18n 対応
+
+- **却下した案: 日本語 Hint/Notes を英語へ単純置換するだけの「英語のみ化」**。決め手: README を英語主（`README.ja.md` 従）にした後も CLI の実出力は日本語 Hint が残っており（`internal/diag/*.go` 22 箇所、`hostinfo/account.go` の Notes/Label 含む）、ドキュメントと実体が不整合になっていた。単純に英語へ置換すると、既存の日本語話者ユーザーへの後方互換が失われる。`-lang ja` を残せば両立できるため、置換ではなく言語切替えを選んだ。
+- **却下した案: OS の UI 言語（GetUserDefaultUILanguage 等）から自動判定**。決め手: `winsys` への新規 API 追加が必要になり、DI seam の provider が増える割に、非日本語 Windows 上で日本語話者が使うケース（逆も同様）で「なぜこの言語で出るのか」が利用者から見て不透明になる。`-lang` 明示指定のほうが挙動を予測可能にできる。
+- **採用: メッセージ ID（`internal/msgid`）+ 引数を `internal/msg` カタログで言語別に解決し、`internal/render` が整形する設計**。`diag` / `hostinfo` は文言を一切持たず ID と値だけを返す。既存の「diag/hostinfo=OS非依存ロジック、render=整形」という層分けをそのまま延長でき、DI seam の禁止方向（diag/hostinfo → winsys）を壊さない形で文言をロジック層から追い出せた。
+- **`internal/diag/sleep.go` の `formatDuration` は `msg` パッケージへ移設**: 秒数から "15 minutes" のような英語散文を組み立てる処理を `diag` に残すと、日本語出力時にそこだけ英語が混入する。`diag` は秒数（`uint32`）を `MsgArgs` として渡すだけにし、単位・複数形（"1 minute" / "15 minutes"）・分秒の切り替えは `msg.duration()` に一本化した。移設のついでに `formatDuration(60)` が `"1 minutes"` を返す複数形バグも修正した。
+- **golden テストは en/ja 両方をフルカバー（10→20件）**: Phase 6 で「文言変更が必ず golden 差分に現れる」という回帰検知の仕組みを作った経緯があり、ja だけ一部サンプルに削るとその効力が半分になる。`internal/render/text_test.go` に `-update` フラグを追加し、`go test ./internal/render/... -update` で両言語分を再生成できるようにした。
+- **カタログ完全性テスト（`internal/msg/catalog_test.go`）を必須にした**: `msgid.ID` は文字列型でコンパイラがキーの取りこぼしを検出できないため、`msgid.All`（全 ID 一覧）を en/ja 両方で非空チェックする専用テストを置かないと、カタログの穴が日本語出力への英語混入として silent fail する。
+
+## 2026-07-29: `flag.CommandLine`（ExitOnError）のままでは `-lang` 検証が `-help` を素通りさせる
+- 却下した案: `flag.CommandLine` を使い続け、`flag.Usage` クロージャ内で invalid な `-lang` を検出して英語にフォールバックする（PR #2 実装時点の元実装）
+- 決め手: `flag.CommandLine` は `ExitOnError` のため、`-help` はもちろん未知フラグ等のパースエラーも `flag.Parse()` 内部で `Usage()` を呼んで `os.Exit` する（[documented `FlagSet.Parse` behavior](https://pkg.go.dev/flag#FlagSet.Parse)）。そのため `flag.Parse()` の後ろに置いた `-lang` 検証コードそのものに実行が到達しない。Codex レビューで `rdp-host-info -lang xx -help` と `rdp-host-info -version -lang xx` がともに exit 0 になる（VISION.md「`-lang` に `en`/`ja` 以外の値を渡した場合はエラーで終了する」に違反）と指摘され、実機 e2e でも再現した
+- 覆す条件: なし。`flag.ContinueOnError` の独自 `FlagSet` に切り替え、`Parse` の戻り値（`error`）を見てから `-lang` 検証 → help/エラー処理 → `-version` の順で分岐する方式（`main.go`）に固定する
