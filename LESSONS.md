@@ -96,3 +96,13 @@
 - 却下した案: `flag.CommandLine` を使い続け、`flag.Usage` クロージャ内で invalid な `-lang` を検出して英語にフォールバックする（PR #2 実装時点の元実装）
 - 決め手: `flag.CommandLine` は `ExitOnError` のため、`-help` はもちろん未知フラグ等のパースエラーも `flag.Parse()` 内部で `Usage()` を呼んで `os.Exit` する（[documented `FlagSet.Parse` behavior](https://pkg.go.dev/flag#FlagSet.Parse)）。そのため `flag.Parse()` の後ろに置いた `-lang` 検証コードそのものに実行が到達しない。Codex レビューで `rdp-host-info -lang xx -help` と `rdp-host-info -version -lang xx` がともに exit 0 になる（VISION.md「`-lang` に `en`/`ja` 以外の値を渡した場合はエラーで終了する」に違反）と指摘され、実機 e2e でも再現した
 - 覆す条件: なし。`flag.ContinueOnError` の独自 `FlagSet` に切り替え、`Parse` の戻り値（`error`）を見てから `-lang` 検証 → help/エラー処理 → `-version` の順で分岐する方式（`main.go`）に固定する
+
+## 2026-08-16: Scoop の manifest は bucket リポジトリ直下ではなく `bucket/` に置く
+- 却下した案: GoReleaser の `scoops.directory` を指定せず、manifest を `kwrkb/scoop-bucket` の直下に出力する（先行の ssh-pushkey / taskctl と同じレイアウト）
+- 決め手: `scoop bucket list` の Manifests 列が kwrkb だけ 0 と表示された（main 1628 / extras 2366 / java 336 は非0）。`scoop/apps/scoop/current/lib/buckets.ps1:116` が `Get-ChildItem "$path\bucket"` しか数えないため。さらに同ファイルの `apps_in_bucket` は `Get-ChildItem $dir -Filter '*.json' -Recurse` で、直下レイアウトだとリポジトリ内の無関係な JSON（`renovate.json` 等を将来置いた場合）までパッケージとして拾う。`Find-BucketDirectory`（同 23-25 行）は `bucket/` が存在すればそこ**だけ**を見るため直下との混在も不可で、bucket リポジトリと publish 側 3 リポジトリを同時に移行する必要があった。移行後 `scoop bucket list` が `kwrkb 3`、`scoop info rdp-host-info` が 0.2.0 を解決することを確認
+- 覆す条件: scoop 本体が直下レイアウトも Manifests 列に数え、かつ `apps_in_bucket` の走査対象を manifest 相当ファイルに限定するようになった場合
+
+## 2026-08-16: 先行プロジェクトのコード内コメントを一次情報として信用しない
+- 却下した案: 同一 bucket へ publish している先行リポジトリ（ssh-pushkey）の `.goreleaser.yaml` に書かれた「directory は指定しない。サブディレクトリに置くと `scoop bucket list` が 0 manifests と表示されるため、GoReleaser 公式もリポジトリ直下を推奨している」というコメントを根拠に、直下レイアウトのまま横展開する
+- 決め手: このコメントは事実と逆だった。実測では**直下**レイアウトの kwrkb が 0 manifests で、`bucket/` を使う公式バケット（main / extras / java）は正しく数えられていた。コメントを検証せずコピーしたため、誤った前提が rdp-host-info の `.goreleaser.yaml` にも一度伝播した（`git log` 上は 8cb3748 → 91b36ef で修正）
+- 覆す条件: なし。VISION.md の「一次情報源はレジストリ / Windows API」と同じ原則を外部ツールの挙動にも適用し、ツールの実装（`lib/buckets.ps1` 等）か実測で裏を取ってから設定を書く
