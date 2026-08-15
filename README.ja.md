@@ -46,7 +46,14 @@ Windows:
 
 Windows 10/11 専用。
 
-[Releases](https://github.com/kwrkb/rdp-host-info/releases) からビルド済みバイナリを取得するのが手軽:
+[Scoop](https://scoop.sh/) が手軽:
+
+```powershell
+scoop bucket add kwrkb https://github.com/kwrkb/scoop-bucket
+scoop install rdp-host-info
+```
+
+または [Releases](https://github.com/kwrkb/rdp-host-info/releases) からビルド済みバイナリを取得:
 
 1. 最新リリースから環境に合う zip（`rdp-host-info_<version>_windows_amd64.zip` など）をダウンロード
 2. 展開して `rdp-host-info.exe` を実行

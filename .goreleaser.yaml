@@ -34,3 +34,26 @@ release:
   github:
     owner: kwrkb
     name: rdp-host-info
+
+# Scoop — Windows 向けの配布チャネル。本ツールは Windows 専用のため、
+# 他の配布経路（Homebrew / apt 等）は対象外で Scoop だけで足りる。
+#
+# トークンはリリース本体用の GITHUB_TOKEN とは別。別リポジトリ（kwrkb/scoop-bucket）への
+# write が要り、workflow 既定の GITHUB_TOKEN は当該リポジトリにしか権限が無いため。
+# PAT は GitHub Secrets ではなく 1Password の `gh` vault に置き、
+# release.yml の load-secrets-action で読み出して env 経由で渡す。
+#
+# directory は指定しない。サブディレクトリに置くと `scoop bucket list` が 0 manifests と
+# 表示されるため、GoReleaser 公式もリポジトリ直下を推奨している。
+scoops:
+  - name: rdp-host-info
+    homepage: https://github.com/kwrkb/rdp-host-info
+    description: Windows CLI that shows Remote Desktop connection info and host readiness at a glance
+    license: MIT
+    # プレリリースでは bucket を更新しない
+    skip_upload: auto
+    repository:
+      owner: kwrkb
+      name: scoop-bucket
+      branch: main
+      token: "{{ .Env.SCOOP_GITHUB_TOKEN }}"

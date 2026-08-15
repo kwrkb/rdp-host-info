@@ -44,7 +44,14 @@ Remote Desktop Status
 
 Windows 10/11 only.
 
-The easiest way is to grab a prebuilt binary from [Releases](https://github.com/kwrkb/rdp-host-info/releases):
+The easiest way is [Scoop](https://scoop.sh/):
+
+```powershell
+scoop bucket add kwrkb https://github.com/kwrkb/scoop-bucket
+scoop install rdp-host-info
+```
+
+Or grab a prebuilt binary from [Releases](https://github.com/kwrkb/rdp-host-info/releases):
 
 1. Download the zip matching your environment from the latest release (e.g. `rdp-host-info_<version>_windows_amd64.zip`)
 2. Extract it and run `rdp-host-info.exe`
