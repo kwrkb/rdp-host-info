@@ -94,3 +94,4 @@ exit code は NG が1つでもあれば 1。
 - **Modern Standby (S0)** 機では STANDBY_TIMEOUT の意味が従来スリープと異なるため、WARN 文言は断定を避けている
 - **`GetExtendedTcpTable` の構造体は自前定義**でバグりやすいため、テストを厚めにしている
 - **go-ole の IDispatch は型ミスマッチが実行時エラー**になる。COM 部分は必ず recover / エラー → Unknown 経路を通す
+- **PC 名は NetBIOS 名（最大 15 文字）**。`hostinfo.Classify` がローカルアカウント候補の `PC名\ユーザー名` とドメイン参加判定に同じ値を使っており、そこは NetBIOS 名でなければならないため、DNS ホスト名には差し替えられない。15 文字超のホスト名の機では表示名が切り詰められる（`internal/winsys/computer_windows.go` にも同じ注意書きがある）
