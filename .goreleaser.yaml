@@ -43,10 +43,13 @@ release:
 # PAT は GitHub Secrets ではなく 1Password の `gh` vault に置き、
 # release.yml の load-secrets-action で読み出して env 経由で渡す。
 #
-# directory は指定しない。サブディレクトリに置くと `scoop bucket list` が 0 manifests と
-# 表示されるため、GoReleaser 公式もリポジトリ直下を推奨している。
+# directory は `bucket` にする。scoop の `bucket list` は `<repo>\bucket` 配下しか
+# 数えず（lib/buckets.ps1）、リポジトリ直下に置くと Manifests 列が 0 と表示される。
+# さらに Find-BucketDirectory は `bucket/` が存在すればそこだけを見るため、
+# bucket リポジトリ内で直下と `bucket/` が混在すると直下側が無視される。
 scoops:
   - name: rdp-host-info
+    directory: bucket
     homepage: https://github.com/kwrkb/rdp-host-info
     description: Windows CLI that shows Remote Desktop connection info and host readiness at a glance
     license: MIT
