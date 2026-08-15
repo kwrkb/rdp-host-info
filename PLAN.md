@@ -129,6 +129,18 @@ type Check interface {
   - [x] `v0.1.0` タグ push → Release 自動生成を確認。ダウンロードした
     zip を展開し実機で実行、`-version` が `v0.1.0` を返すこと、
     実際の診断出力が得られることを確認（検証用一時ファイルは削除済み）
+- [x] **Phase 8 — 出力の i18n（既定 en / `-lang ja`）**
+  - [x] `internal/msgid` + `internal/msg` カタログを導入し、`diag` /
+    `hostinfo` から文言を排除（ID と値のみを返す）
+  - [x] golden test を en/ja 両言語でフルカバー、カタログ完全性テスト
+  - [x] README を英語主・`README.ja.md` 従に再編
+- [x] **Phase 9 — Scoop 配布 (v0.2.0)**
+  - [x] `.goreleaser.yaml` に `scoops:`（`directory: bucket`）を追加し、
+    `release.yml` で 1Password から `SCOOP_GITHUB_TOKEN` を供給
+  - [x] README（英/日）に `scoop install rdp-host-info` の導線を追加
+  - [x] `v0.2.0` タグ push → `kwrkb/scoop-bucket` に manifest が
+    発行されることを確認（`scoop bucket list` が `kwrkb 3`、
+    `scoop info rdp-host-info` が 0.2.0 を解決）
 
 各フェーズ末で `go build ./... && go vet ./... && go test ./...` を通す。
 
@@ -163,6 +175,13 @@ type Check interface {
 
 ## 進捗メモ
 
+- **Phase 9 完了 = v0.2.0 リリース**（2026-08-16）
+  - manifest の出力先は bucket リポジトリ直下ではなく `bucket/`。scoop は
+    `bucket/` が存在するとそこだけを見るため、`kwrkb/scoop-bucket` と
+    publish 側 3 リポジトリ（本リポジトリ / ssh-pushkey / taskctl）を同時に
+    移行した。根拠は LESSONS.md
+  - goreleaser-action の `version` は `latest` ではなく `"~> v2"` に固定
+    （`.goreleaser.yaml` が `version: 2` のため）
 - **Adversarial review 対応**（Codex, 2026-07-13）: 「取得失敗は成功とも失敗とも偽らず Unknown」原則への抵触 2 件を修正
   - firewall フォールバック（ルール列挙）が `Action`（Allow/Block）を確認しておらず、有効な受信ブロックルールを許可ルールと誤認しうる問題を修正（`Action==Allow` を追加）
   - group_membership の OK メッセージが「接続を許可されている」と言い切っていたが、実際は SID 所属の確認のみで deny-logon ポリシーは検出できない。「グループのメンバーである」に文言を弱め、deny ポリシーの手動確認方法を Hint に追加
