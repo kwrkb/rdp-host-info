@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 単一テスト: `go test ./internal/diag/ -run TestRDPEnabledCheck`
 - lint: `golangci-lint run ./...`（設定は `.golangci.yml`）
 - 実行: `go run .`
+- golden 再生成: `go test ./internal/render/... -update`（en/ja 両言語分を一括更新）
 
 module は `github.com/kwrkb/rdp-host-info`（Go 1.26）。依存は `golang.org/x/sys` と `github.com/go-ole/go-ole`（ファイアウォール COM 用）の 2 つのみ。
 
@@ -32,13 +33,13 @@ RDP 接続用ユーザー名の候補生成は `internal/hostinfo/account.go` �
 
 ### winsys の隔離
 
-Windows 依存コードは `internal/winsys/*_windows.go` に集約し、ビルドタグで隔離する。ロジックを持たせず「取得と型変換のみ」に留め、テスト対象を最小化する（実装の妥当性検証は smoke test で行う）。例外は `netinfo.go` — `net` パッケージのみで実装されており OS 非依存のためユニットテスト対象になっている。
+Windows 依存コードは `internal/winsys/*_windows.go` に集約し、ビルドタグで隔離する（そのため Linux では `go build ./...` が通らない。CI は windows-latest 固定）。ロジックを持たせず「取得と型変換のみ」に留め、テスト対象を最小化する（実装の妥当性検証は smoke test で行う）。例外は `netinfo.go` — `net` パッケージのみで実装されており OS 非依存のためユニットテスト対象になっている。
 
 ### render とデータフロー
 
 `internal/render` の `HostInfoText` / `StatusText` が VISION.md 準拠のテキストを生成する。golden test（`testdata/*.golden`、`en`/`ja` 両言語分）で出力の回帰を検知する。将来 JSON/GUI 出力を追加する場合もこの層に追加する。
 
-全体のデータフローは `winsys`（OS からの取得）→ `hostinfo` / `diag`（OS 非依存のロジック・判定）→ `render`（整形）→ `main`（配線・exit code）。exit code は NG が1つでもあれば 1。
+全体のデータフローは `winsys`（OS からの取得）→ `hostinfo` / `diag`（OS 非依存のロジック・判定）→ `msg`（言語別の文言解決）→ `render`（整形）→ `main`（配線・exit code）。exit code は NG が1つでもあれば 1。
 
 ### 出力の i18n（msgid / msg）
 
